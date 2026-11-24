@@ -1,10 +1,10 @@
-# Open WebUI Portable Deployment Package
+# Open WebUI Portable Deployment Package & Setup Guide
 
-## 1. Overview & Architecture
+This repository contains the complete, reusable, production-tested deployment package for our enhanced **Open WebUI v0.13.4** implementation. It enables deploying Open WebUI onto any physical or virtual system—on-premise, cloud VM, or developer workstation—connecting back to the **existing LiteLLM Proxy** on our central AI Gateway server.
 
-This package provides a self-contained, reproducible, portable deployment of our enhanced **Open WebUI v0.13.4** environment. It enables deploying Open WebUI onto any physical or virtual system—on-premise, cloud, or developer workstation—connecting back to the **existing LiteLLM Proxy** on our central AI Gateway server.
+---
 
-### Target Architecture
+## 1. Architectural Topology
 
 ```mermaid
 flowchart LR
@@ -43,41 +43,48 @@ flowchart LR
     TOOLS -->|"Voice Catalog (/v1/audio/voices)\nBearer LITELLM_API_KEY"| LITELLM
 ```
 
-### Key Architectural Tenets
+### Core Architecture Principles
 
-1. **Zero Local Inference Infrastructure:** The target machine requires only Docker, Docker Compose, and Python 3. No GPUs, no local LLM engines (`llama.cpp`), no diffusion backends (`sd.cpp`, ComfyUI), and no local STT/TTS models are needed on the target host.
-2. **Strict Security Isolation:** The target machine and its Open WebUI deployment possess **zero access to internal Gateway credentials** (`GATEWAY_API_KEY`) and zero access to internal Gateway hostnames (`gateway-api:8000`). All interactions are authenticated with LiteLLM proxy keys (`LITELLM_API_KEY`).
-3. **Stock Container Images (Zero Source Patching):** Open WebUI runs strictly from the upstream, unpatched image `ghcr.io/open-webui/open-webui:v0.13.4`. Legacy monkey-patches to frontend JS chunks and backend router files have been completely eliminated.
-4. **Isolated Model Discovery:** Text chat models and image generation models are strictly segregated at the proxy level. The chat model selector remains completely unpolluted by diffusion checkpoints, while image connections query the dedicated `/images/v1` routes.
+1. **Zero Local Inference Infrastructure:** The target machine requires only Docker, Docker Compose, and Python 3. No local GPUs, Vulkan/ROCm drivers, or inference engines (`llama.cpp`, `sd.cpp`, Faster-Whisper, Piper) are needed.
+2. **Complete Credential & Network Isolation:** Open WebUI possesses **zero knowledge of Gateway credentials** (`GATEWAY_API_KEY`) and no direct network route to internal Gateway services (`gateway-api:8000`). All interactions are mediated through LiteLLM using a standard API key (`LITELLM_API_KEY`).
+3. **Stock Container Images (Zero Source Patching):** Open WebUI runs strictly from the unpatched upstream image `ghcr.io/open-webui/open-webui:v0.13.4`. All legacy monkey-patches from v0.11.1 have been retired.
+4. **Strict Model Segregation:** LiteLLM isolates image models under `/images/v1/models`. The text chat model selector is never polluted with diffusion checkpoints.
 5. **Configurable Endpoint Mobility:** Every endpoint, key, path, port, and timeout is configurable via `.env` or `configure.py` without modifying Python source code.
 
 ---
 
-## 2. Inventory of Migrated Custom Capabilities
+## 2. Quick Setup (3 Steps)
 
-| Subsystem | Component | Implementation in Portable Package |
-| :--- | :--- | :--- |
-| **Speech Coach** | Pronunciation & Fluency Assessment | `tools/speech_coach_tool.py` (v2.0.0 with native Valves) providing `analyze_speech_attempt`, `get_supported_languages_and_voices`, and `start_pronunciation_practice`. |
-| **Speech Coach Valves** | Endpoint Configuration | Native Open WebUI Valves exposing `litellm_base_url`, `speech_analysis_path`, `voices_path`, `api_key`, and `timeout`. Configurable dynamically via UI or database. |
-| **Realtime Voice Calls** | Full-Duplex Voice Subsystem | Open WebUI v0.13.4 native OpenAI Realtime WebSocket client configured to connect to `ws://<litellm_base_url>/v1/realtime?model=realtime-voice`. Handled natively without frontend patches. |
-| **Image Generation** | OpenAI-Compatible Image Pipeline | OpenAI-compatible image endpoint routing to `${LITELLM_BASE_URL}/images/v1/images/generations` with default model `flux1-schnell` and native `images.connections` registration. |
-| **Image Model Separation** | Dedicated Image Catalog | Isolated discovery via `GET ${LITELLM_BASE_URL}/images/v1/models` and `GET ${LITELLM_BASE_URL}/images/v1/model/info`. |
-| **Text Model Routing** | Chat Completions | Clean chat model discovery via `GET ${LITELLM_BASE_URL}/v1/models` and streaming completions via `POST ${LITELLM_BASE_URL}/v1/chat/completions`. |
-| **Turn-Based Audio STT** | Faster-Whisper Transcription | OpenAI-compatible multipart audio transcription targeting `${LITELLM_BASE_URL}/v1/audio/transcriptions` (model: `whisper-1`). |
-| **Turn-Based Audio TTS** | Piper Speech Synthesis | OpenAI-compatible speech synthesis targeting `${LITELLM_BASE_URL}/v1/audio/speech` (model: `tts-1`, voice: `alloy` / installed Piper voices). |
-| **Custom Tools Management** | Deterministic Registration | `tools/register_tool.py` providing idempotent, container-native registration for custom tools into Open WebUI's SQLite database without duplicate entries. |
+### Step 1: Configure Your Target LiteLLM Connection
+```bash
+python3 configure.py \
+    --litellm-url "https://litellm.example.com" \
+    --api-key "sk-your-litellm-master-key" \
+    --port 3000
+```
+
+### Step 2: Run the Automated Installer
+```bash
+./install.sh
+```
+
+### Step 3: Verify All 14 Integration Targets
+```bash
+python3 validate.py
+```
 
 ---
 
-## 3. Package File Tree
+## 3. Package File Structure
 
 ```
 open-webui-portable/
-├── README.md                      # Architecture overview and capability inventory (this file)
-├── INSTALL.md                     # Step-by-step installation instructions for a new system
+├── README.md                      # Package overview and setup guide (this file)
+├── INSTALL.md                     # Step-by-step deployment guide
 ├── CONFIGURATION.md               # Detailed configuration guide for all parameters
-├── UPGRADE.md                     # Version upgrade runbook and regression checklist
-├── TROUBLESHOOTING.md             # Common deployment and connectivity issues with resolutions
+├── UPGRADE.md                     # Version upgrade runbook and rollback procedure
+├── TROUBLESHOOTING.md             # Common deployment, connectivity, and auth resolutions
+├── .gitignore                     # Git ignore rules (prevents committing secrets or databases)
 ├── env.example                    # Template environment file with variable definitions
 ├── docker-compose.yml.template    # Docker Compose template for Open WebUI v0.13.4
 ├── install.sh                     # Automated, idempotent installer script
@@ -101,24 +108,73 @@ open-webui-portable/
 
 ---
 
-## 4. Quick Start
+## 4. First-Time Administrator Setup
 
-### 1. Configure Target LiteLLM Connection
+After running `./install.sh`, perform the following one-time setup steps in your browser:
+
+1. **Bootstrap Admin Account:**
+   - Open `http://<your-host-ip>:3000` in your web browser.
+   - Click **Sign Up**. The first registered user automatically becomes the system **Administrator** (`role: admin`).
+2. **Verify Speech Coach Tool:**
+   - In Open WebUI, navigate to **Workspace** -> **Tools**.
+   - Verify **Speech Coach & Pronunciation Assessment** is listed and active (`is_active: true`).
+   - Click the gear icon to inspect or adjust Valves (`litellm_base_url`, `timeout`).
+3. **Use Speech Coach in Chat:**
+   - In any chat window, click the **+ (Tools)** button and select **Speech Coach & Pronunciation Assessment**.
+   - Ask: *"List available languages and voices for speaking practice"* or *"Give me a pronunciation practice sentence in Spanish"*.
+4. **Use Realtime Voice Calls:**
+   - Click your profile avatar (bottom-left) -> **Settings** -> **Audio**.
+   - Under **Call Settings**, ensure a voice is selected (e.g. `en_US-lessac-medium` or `alloy`).
+   - In any chat, click the **Call (Headphones)** button to initiate a full-duplex realtime voice conversation.
+
+---
+
+## 5. Pushing to GitHub
+
+The repository is fully initialized locally on branch `main` with remote origin set to `git@github.com:CyberRoamer/open-webui-portable.git`.
+
+### SSH Key Setup
+
+The SSH key is stored at:
 ```bash
-python3 configure.py \
-    --litellm-url "https://litellm.example.com" \
-    --api-key "your-litellm-master-key" \
-    --port 3000
+/home/abc/Documents/ssh/id_ed25519
 ```
 
-### 2. Run the Portable Installer
-```bash
-./install.sh
+This key is confirmed and authenticated with GitHub:
+```
+Hi CyberRoamer! You've successfully authenticated, but GitHub does not provide shell access.
 ```
 
-### 3. Verify All Endpoints
-```bash
-python3 validate.py
-```
+### Initial Push Instructions
 
-For complete instructions, consult [INSTALL.md](file:///mnt/ai-docker/open-webui-portable/INSTALL.md).
+Because GitHub does not allow creating new repositories via a raw `git push` over SSH, follow these steps:
+
+1. **Create the empty repository on GitHub:**
+   - Open your browser and go to: [https://github.com/new](https://github.com/new)
+   - Set **Repository name** to: `open-webui-portable`
+   - Set visibility to **Public** or **Private** (as desired).
+   - **Do NOT** initialize with a README, .gitignore, or license (the repository is already initialized and committed locally).
+   - Click **Create repository**.
+
+2. **Push the committed code from the terminal:**
+   ```bash
+   cd /mnt/ai-docker/open-webui-portable
+   GIT_SSH_COMMAND="ssh -i /home/abc/Documents/ssh/id_ed25519" git push -u origin main
+   ```
+
+3. **Subsequent pushes:**
+   Since `core.sshCommand` is configured in `.git/config`, standard Git commands will automatically use the key:
+   ```bash
+   cd /mnt/ai-docker/open-webui-portable
+   git push
+   ```
+
+---
+
+## 6. Documentation Map
+
+* [INSTALL.md](file:///mnt/ai-docker/open-webui-portable/INSTALL.md) — Complete installation guide for fresh deployments.
+* [CONFIGURATION.md](file:///mnt/ai-docker/open-webui-portable/CONFIGURATION.md) — Comprehensive guide to all configurable variables and remote HTTPS setups.
+* [UPGRADE.md](file:///mnt/ai-docker/open-webui-portable/UPGRADE.md) — Runbook for upgrading Open WebUI container versions while preserving user data and custom tools.
+* [TROUBLESHOOTING.md](file:///mnt/ai-docker/open-webui-portable/TROUBLESHOOTING.md) — Diagnostic checklists and solutions for network, authentication, and database issues.
+* [optional-patches/README.md](file:///mnt/ai-docker/open-webui-portable/optional-patches/README.md) — Evolution analysis and archive of retired v0.11.1 patches.
