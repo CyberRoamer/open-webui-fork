@@ -129,52 +129,10 @@ After running `./install.sh`, perform the following one-time setup steps in your
 
 ---
 
-## 5. Pushing to GitHub
+## 5. Documentation Map
 
-The repository is fully initialized locally on branch `main` with remote origin set to `git@github.com:CyberRoamer/open-webui-fork.git`.
-
-### SSH Key Setup
-
-The SSH key is stored at:
-```bash
-/home/abc/Documents/ssh/id_ed25519
-```
-
-This key is confirmed and authenticated with GitHub:
-```
-Hi CyberRoamer! You've successfully authenticated, but GitHub does not provide shell access.
-```
-
-### Initial Push Instructions
-
-Because GitHub does not allow creating new repositories via a raw `git push` over SSH, follow these steps:
-
-1. **Create the empty repository on GitHub:**
-   - Open your browser and go to: [https://github.com/new](https://github.com/new)
-   - Set **Repository name** to: `open-webui-portable`
-   - Set visibility to **Public** or **Private** (as desired).
-   - **Do NOT** initialize with a README, .gitignore, or license (the repository is already initialized and committed locally).
-   - Click **Create repository**.
-
-2. **Push the committed code from the terminal:**
-   ```bash
-   cd /mnt/ai-docker/open-webui-portable
-   GIT_SSH_COMMAND="ssh -i /home/abc/Documents/ssh/id_ed25519" git push -u origin main
-   ```
-
-3. **Subsequent pushes:**
-   Since `core.sshCommand` is configured in `.git/config`, standard Git commands will automatically use the key:
-   ```bash
-   cd /mnt/ai-docker/open-webui-portable
-   git push
-   ```
-
----
-
-## 6. Documentation Map
-
-* [INSTALL.md](file:///mnt/ai-docker/open-webui-portable/INSTALL.md) — Complete installation guide for fresh deployments.
-* [CONFIGURATION.md](file:///mnt/ai-docker/open-webui-portable/CONFIGURATION.md) — Comprehensive guide to all configurable variables and remote HTTPS setups.
-* [UPGRADE.md](file:///mnt/ai-docker/open-webui-portable/UPGRADE.md) — Runbook for upgrading Open WebUI container versions while preserving user data and custom tools.
-* [TROUBLESHOOTING.md](file:///mnt/ai-docker/open-webui-portable/TROUBLESHOOTING.md) — Diagnostic checklists and solutions for network, authentication, and database issues.
-* [optional-patches/README.md](file:///mnt/ai-docker/open-webui-portable/optional-patches/README.md) — Evolution analysis and archive of retired v0.11.1 patches.
+* [INSTALL.md](INSTALL.md) — Complete installation guide for fresh deployments.
+* [CONFIGURATION.md](CONFIGURATION.md) — Comprehensive guide to all configurable variables and remote HTTPS setups.
+* [UPGRADE.md](UPGRADE.md) — Runbook for upgrading Open WebUI container versions while preserving user data and custom tools.
+* [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Diagnostic checklists and solutions for network, authentication, and database issues.
+* [optional-patches/README.md](optional-patches/README.md) — Evolution analysis and archive of retired v0.11.1 patches.
