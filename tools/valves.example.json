@@ -1,0 +1,7 @@
+{
+  "litellm_base_url": "http://<litellm-host>:4000",
+  "speech_analysis_path": "/v1/audio/speech-analysis",
+  "voices_path": "/v1/audio/voices",
+  "api_key": "",
+  "timeout": 60.0
+}

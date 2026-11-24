@@ -1,0 +1,34 @@
+# Environment and sensitive keys
+.env
+.env.*
+!.env.template
+!env.example
+
+# Runtime persistent data & databases
+data/
+*.db
+*.db-shm
+*.db-wal
+.webui_secret_key
+
+# Backups and temporary files
+backups/
+staging-test/
+scratch/
+tmp/
+*.orig
+*.bak
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
