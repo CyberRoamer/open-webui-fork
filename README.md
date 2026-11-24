@@ -47,7 +47,7 @@ flowchart LR
 
 1. **Zero Local Inference Infrastructure:** The target machine requires only Docker, Docker Compose, and Python 3. No local GPUs, Vulkan/ROCm drivers, or inference engines (`llama.cpp`, `sd.cpp`, Faster-Whisper, Piper) are needed.
 2. **Complete Credential & Network Isolation:** Open WebUI possesses **zero knowledge of Gateway credentials** (`GATEWAY_API_KEY`) and no direct network route to internal Gateway services (`gateway-api:8000`). All interactions are mediated through LiteLLM using a standard API key (`LITELLM_API_KEY`).
-3. **Stock Container Images (Zero Source Patching):** Open WebUI runs strictly from the unpatched upstream image `ghcr.io/open-webui/open-webui:v0.13.4`. All legacy monkey-patches from v0.11.1 have been retired.
+3. **Pinned Stock Base + Verified Mobile Realtime Patch:** Open WebUI runs from `ghcr.io/open-webui/open-webui:v0.13.4` with a single SHA-256-verified frontend bundle patch (`patches/v0.13.4/BnHPywC-.js`) mounted read-only and applied automatically at startup (`openwebui_realtime_entrypoint.sh`) to add native 44.1/48 kHz AudioWorklet resampling and mobile touch/pointer audio unlock. Unexpected upstream bundle hashes are rejected automatically without overwriting. All legacy v0.11.1 monkey-patches remain retired.
 4. **Strict Model Segregation:** LiteLLM isolates image models under `/images/v1/models`. The text chat model selector is never polluted with diffusion checkpoints.
 5. **Configurable Endpoint Mobility:** Every endpoint, key, path, port, and timeout is configurable via `.env` or `configure.py` without modifying Python source code.
 
@@ -89,21 +89,27 @@ open-webui-portable/
 ├── docker-compose.yml.template    # Docker Compose template for Open WebUI v0.13.4
 ├── install.sh                     # Automated, idempotent installer script
 ├── configure.py                   # CLI and interactive configuration manager
-├── validate.py                    # 14-target automated integration validation suite
+├── validate.py                    # 15-target automated integration validation suite
+├── patches/
+│   └── v0.13.4/
+│       ├── BnHPywC-.js            # Patched v0.13.4 realtime AudioWorklet bundle (mobile resampler + unlock)
+│       ├── BnHPywC-.js.orig       # Verified original v0.13.4 upstream bundle backup
+│       ├── openwebui_realtime_entrypoint.sh  # Idempotent startup patcher with SHA-256 verification
+│       └── patch_openwebui_v0134_realtime.py # CLI patch/status/rollback utility
 ├── tools/
 │   ├── speech_coach_tool.py       # Speech Coach v2.0.0 custom tool source with Valves
 │   ├── register_tool.py           # Tool registration script (DB & API modes)
 │   └── valves.example.json        # Reference Valves configuration JSON
 └── optional-patches/
-    ├── README.md                  # Evolution report: why v0.13.4 operates unpatched
-    ├── legacy_v0.11.1/            # Archived v0.11.1 patches (for reference/audit)
+    ├── README.md                  # Evolution report: retired v0.11.1 patches vs v0.13.4 mobile patch
+    ├── legacy_v0.11.1/            # Archived v0.11.1 patches (for reference/audit only)
     │   ├── 34.DRvNJD_W.js
-    │   ├── fwivdHaq.js
     │   ├── D5GoHi-U.js
-    │   ├── images.py
-    │   └── audio.py
+    │   ├── audio.py
+    │   ├── fwivdHaq.js
+    │   └── images.py
     └── realtime_voice/
-        └── patch_openwebui_realtime.py  # Standalone legacy CallOverlay patcher
+        └── patch_openwebui_realtime.py  # Standalone legacy v0.11.1 CallOverlay patcher
 ```
 
 ---

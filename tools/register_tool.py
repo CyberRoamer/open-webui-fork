@@ -161,6 +161,7 @@ def register_via_db(
                 """
                 UPDATE tool
                 SET name = ?,
+                    version_id = ?,
                     content = ?,
                     specs = ?,
                     meta = ?,
@@ -169,7 +170,7 @@ def register_via_db(
                     updated_at = ?
                 WHERE id = ?
                 """,
-                (TOOL_NAME, content, specs_json, meta_json, valves_json, now, TOOL_ID),
+                (TOOL_NAME, "2.0.0", content, specs_json, meta_json, valves_json, now, TOOL_ID),
             )
             print(f"[SUCCESS] Tool '{TOOL_ID}' successfully updated.")
         else:

@@ -20,6 +20,8 @@ This guide details all configurable parameters supported by the Open WebUI Porta
 | `IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN` | `.*` | Regex matching models that return image URLs rather than base64. | Image Studio |
 | `ENABLE_IMAGE_EDIT` | `true` | Enables image-to-image / inpainting editing mode. | Image Studio |
 | `IMAGE_EDIT_ENGINE` | `openai` | Engine used for image editing operations. | Image Studio |
+| `IMAGES_EDIT_OPENAI_API_BASE_URL` | `${LITELLM_BASE_URL}/images/v1` | Dedicated LiteLLM route for image editing (prevents default `api.openai.com` fallback). | Image Studio |
+| `IMAGES_EDIT_OPENAI_API_KEY` | `${LITELLM_API_KEY}` | Auth token for image editing requests. | Image Studio |
 | `IMAGE_EDIT_MODEL` | `flux1-schnell` | Default model for image editing. | Image Studio |
 | `AUDIO_STT_ENGINE` | `openai` | Turn-based Speech-to-Text backend engine type. | Audio STT |
 | `AUDIO_STT_OPENAI_API_BASE_URL` | `${LITELLM_BASE_URL}/v1` | Base URL for STT transcriptions (`POST /v1/audio/transcriptions`). | Audio STT |
@@ -148,3 +150,4 @@ To ensure complete credential isolation:
 - **Never expose `GATEWAY_API_KEY`:** Open WebUI must never be given `GATEWAY_API_KEY`. Only LiteLLM uses this key to talk to the AI Gateway.
 - **Never use internal container names:** The target host cannot reach `gateway-api:8000` or `litellm:4000` unless on the same Docker bridge network. Use external DNS, host IPs, or domain names.
 - **Client Bundle Isolation:** Open WebUI's client-facing browser bundles contain only session tokens; all outbound API keys remain server-side inside the container.
+- **Realtime Mobile Patch Verification:** `docker-compose.yml.template` mounts `patches/v0.13.4/BnHPywC-.js` and `patches/v0.13.4/openwebui_realtime_entrypoint.sh` read-only at `/opt/realtime-patch/`. At container startup, the entrypoint checks SHA-256 fingerprints (`d2359a68...` upstream v0.13.4, `d5e4d07c...` patched), backs up `.orig`, stages atomically, and refuses to overwrite unknown upstream bundles.

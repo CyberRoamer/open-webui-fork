@@ -179,13 +179,17 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Frontend Modifications Audit
+# 6. Verify Realtime Mobile Compatibility Patch (v0.13.4)
 # ------------------------------------------------------------------------------
-log_step "Step 6: Auditing Frontend Modifications"
+log_step "Step 6: Verifying Open WebUI v0.13.4 Realtime Mobile Patch"
 
-log_info "Open WebUI v0.13.4 operates using upstream stock assets."
-log_info "Native OpenAI Realtime WebSocket client and isolated LiteLLM image models supersede legacy patches."
-log_pass "Zero frontend monkey-patches applied (Stock Upstream Image verified)."
+log_info "Checking SHA-256 fingerprint of BnHPywC-.js inside '$TARGET_CONTAINER'..."
+if ! python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --status; then
+    log_warn "Bundle did not match expected patched state; attempting verified patch..."
+    python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --patch
+    python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --status
+fi
+log_pass "Open WebUI v0.13.4 realtime mobile compatibility patch verified."
 
 # ------------------------------------------------------------------------------
 # 7. Register & Configure Speech Coach Custom Tool & Valves
@@ -207,61 +211,128 @@ docker exec "$TARGET_CONTAINER" rm -rf /tmp/tools
 log_pass "Speech Coach Custom Tool & Valves registered in container database." 
 
 # ------------------------------------------------------------------------------
-# 8. Configure Native Image Connections
+# 8. Configure Native Image Connections (Container-Native, Idempotent)
 # ------------------------------------------------------------------------------
 log_step "Step 8: Configuring Native Image Model Connections"
 
-if [ -f "$DB_FILE" ]; then
-    python3 -c "
-import sqlite3, json, time, uuid
+IMG_DISCOVERY_URL="${IMAGES_OPENAI_API_BASE_URL:-${LITELLM_URL}/images/v1}"
+IMG_DISCOVERY_KEY="${IMAGES_OPENAI_API_KEY:-${LITELLM_KEY}}"
+IMG_DEFAULT_MODEL="${IMAGE_GENERATION_MODEL:-flux1-schnell}"
+IMG_EDIT_MODEL="${IMAGE_EDIT_MODEL:-flux1-schnell}"
 
-conn = sqlite3.connect('$DB_FILE')
+docker exec \
+    -e IMG_DISCOVERY_URL="$IMG_DISCOVERY_URL" \
+    -e IMG_DISCOVERY_KEY="$IMG_DISCOVERY_KEY" \
+    -e IMG_DEFAULT_MODEL="$IMG_DEFAULT_MODEL" \
+    -e IMG_EDIT_MODEL="$IMG_EDIT_MODEL" \
+    "$TARGET_CONTAINER" python3 -c "
+import sqlite3, json, time, uuid, os
+
+db_path = '/app/backend/data/webui.db'
+if not os.path.exists(db_path):
+    print('[WARN] webui.db not yet initialized; skipping image connection seed.')
+    raise SystemExit(0)
+
+conn = sqlite3.connect(db_path)
 c = conn.cursor()
 
-# Ensure images.connections exists in config table
 c.execute(\"SELECT value FROM config WHERE key = 'images.connections'\")
 row = c.fetchone()
 
-img_url = '${IMAGES_OPENAI_API_BASE_URL:-${LITELLM_URL}/images/v1}'
-img_key = '${IMAGES_OPENAI_API_KEY:-${LITELLM_KEY}}'
-default_model = '${IMAGE_GENERATION_MODEL:-flux1-schnell}'
+img_url = os.environ['IMG_DISCOVERY_URL'].rstrip('/')
+img_key = os.environ['IMG_DISCOVERY_KEY']
+default_model = os.environ['IMG_DEFAULT_MODEL']
+edit_model = os.environ['IMG_EDIT_MODEL']
 now = int(time.time())
 
-conn_id = str(uuid.uuid4())
-connection_entry = {
-    'id': conn_id,
-    'name': 'LiteLLM Image Gateway',
-    'type': 'openai',
-    'url': img_url,
-    'key': img_key,
-    'config': {
-        'enable': True,
-        'capabilities': {
-            'image_generation': True,
-            'image_edit': True
-        },
-        'model_ids': [default_model],
-        'access_grants': [{'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}],
-        'auth_type': 'bearer',
-        'headers': {},
-        'size': '512x512',
-        'steps': 50
-    }
-}
+existing_conns = json.loads(row[0]) if (row and row[0]) else []
+if not isinstance(existing_conns, list):
+    existing_conns = []
 
-if row is None:
-    c.execute(\"INSERT INTO config (key, value, updated_at) VALUES ('images.connections', ?, ?)\", (json.dumps([connection_entry]), now))
-    c.execute(\"INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('image_generation.enable', 'true', ?)\", (now,))
-    c.execute(\"INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('image_generation.engine', '\"openai\"', ?)\", (now,))
-    c.execute(\"INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('image_generation.default_model', ?, ?)\", (json.dumps(f'{conn_id}:{default_model}'), now))
-    conn.commit()
-    print('[SUCCESS] Initialized images.connections configuration in database.')
+def _is_stale_openai_default(entry):
+    return (
+        entry.get('url', '').rstrip('/') == 'https://api.openai.com/v1'
+        and not entry.get('key')
+    )
+
+# Deduplicate LiteLLM image entries and drop unconfigured OpenAI edit placeholders
+matching = [x for x in existing_conns if isinstance(x, dict) and x.get('url', '').rstrip('/') == img_url]
+other_conns = [
+    x for x in existing_conns
+    if isinstance(x, dict)
+    and x.get('url', '').rstrip('/') != img_url
+    and not _is_stale_openai_default(x)
+]
+
+desired_models = []
+for m in (default_model, edit_model):
+    if m and m not in desired_models:
+        desired_models.append(m)
+
+if matching:
+    primary = dict(matching[0])
+    conn_id = primary.get('id') or str(uuid.uuid4())
+    primary['id'] = conn_id
+    primary['key'] = img_key
+    cfg = dict(primary.get('config') or {})
+    cfg['enable'] = True
+    caps = dict(cfg.get('capabilities') or {})
+    caps['image_generation'] = True
+    caps['image_edit'] = True
+    cfg['capabilities'] = caps
+    models = [m for m in (cfg.get('model_ids') or []) if isinstance(m, str) and m]
+    for m in desired_models:
+        if m not in models:
+            models.append(m)
+    cfg['model_ids'] = models
+    primary['config'] = cfg
+    updated_conns = [primary] + other_conns
+    c.execute(\"UPDATE config SET value = ?, updated_at = ? WHERE key = 'images.connections'\", (json.dumps(updated_conns), now))
+    print('[INFO] Synchronized single LiteLLM images.connections entry (removed duplicates/stale defaults).')
 else:
-    print('[INFO] Existing images.connections configuration retained.')
+    conn_id = str(uuid.uuid4())
+    connection_entry = {
+        'id': conn_id,
+        'name': 'LiteLLM Image Gateway',
+        'type': 'openai',
+        'url': img_url,
+        'key': img_key,
+        'config': {
+            'enable': True,
+            'capabilities': {
+                'image_generation': True,
+                'image_edit': True
+            },
+            'model_ids': desired_models,
+            'access_grants': [{'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}],
+            'auth_type': 'bearer',
+            'headers': {},
+            'size': '512x512',
+            'steps': 50
+        }
+    }
+    updated_conns = [connection_entry] + other_conns
+    if row is None:
+        c.execute(\"INSERT INTO config (key, value, updated_at) VALUES ('images.connections', ?, ?)\", (json.dumps(updated_conns), now))
+    else:
+        c.execute(\"UPDATE config SET value = ?, updated_at = ? WHERE key = 'images.connections'\", (json.dumps(updated_conns), now))
+    print('[SUCCESS] Initialized images.connections configuration in database.')
 
+for cfg_key, cfg_val in (
+    ('image_generation.enable', True),
+    ('image_generation.engine', 'openai'),
+    ('image_generation.default_model', f'{conn_id}:{default_model}'),
+    ('images.edit.enable', True),
+    ('images.edit.engine', 'openai'),
+    ('images.edit.default_model', f'{conn_id}:{edit_model}'),
+    ('images.edit.openai.api_base_url', img_url),
+    ('images.edit.openai.api_key', img_key),
+):
+    c.execute('INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, ?)', (cfg_key, json.dumps(cfg_val), now))
+
+conn.commit()
 conn.close()
-" || log_warn "Image connections configuration skipped or already initialized."
-fi
+" || log_warn "Image connections configuration skipped."
 
 # ------------------------------------------------------------------------------
 # 9. Completion Summary

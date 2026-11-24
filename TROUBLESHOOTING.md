@@ -128,7 +128,15 @@ python3 validate.py
 * **Symptom:** User expects diffusion models (e.g., `flux1-schnell`) in the text model dropdown.
 * **Explanation:** **This is intended behavior by design!**
   Text chat models and image generation models are strictly segregated. Image models appear in **Image Generation Settings** and can be invoked with the image generation button or prompts, but do not pollute the text chat dropdown.
-* **Verification:**
-  1. Go to **Settings** -> **Images**.
-  2. Ensure **Image Generation Engine** is set to `OpenAI` and **Model** shows `flux1-schnell` (or connected LiteLLM models).
-  3. Ensure `IMAGES_OPENAI_API_BASE_URL=${LITELLM_BASE_URL}/images/v1`.
+### Issue 8: Realtime Voice Audio Fails on Mobile Browsers (44.1 / 48 kHz or Suspended AudioContext)
+
+* **Symptom:** Desktop realtime calls work, but mobile Safari / Chrome throws an AudioWorklet sample-rate error or plays no audio until tapped.
+* **Root Cause:** Upstream Open WebUI v0.13.4 hardcodes `new AudioContext({sampleRate: 24000})`, which fails or requires gesture unlock on mobile hardware locked to 44.1/48 kHz.
+* **Verification & Resolution:**
+  1. Confirm the v0.13.4 mobile realtime patch is active in the container:
+     ```bash
+     python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --status
+     ```
+     Expected: `[STATUS] PATCHED (sha256=d5e4d07cfd5d13b4dfe0aa0d0dcb261ef2296d0ca6484f8ffcc7ac89187f67ab, ...)`.
+  2. Check startup hook logs (`docker logs open-webui | grep realtime-patch`) and ensure `docker-compose.yml` mounts `./patches/v0.13.4/BnHPywC-.js` and `./patches/v0.13.4/openwebui_realtime_entrypoint.sh`.
+  3. If `validate.py` fails the bundle checksum check on a non-v0.13.4 image, verify whether the container image tag was changed from `ghcr.io/open-webui/open-webui:v0.13.4`; the patcher intentionally refuses to overwrite unknown bundles.

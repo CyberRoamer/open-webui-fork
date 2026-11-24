@@ -34,7 +34,9 @@ cp -r /path/to/open-webui-portable/* /opt/open-webui-portable/
 cd /opt/open-webui-portable
 
 # Ensure helper scripts have execution permissions
-chmod +x install.sh configure.py validate.py tools/register_tool.py
+chmod +x install.sh configure.py validate.py tools/register_tool.py \
+    patches/v0.13.4/patch_openwebui_v0134_realtime.py \
+    patches/v0.13.4/openwebui_realtime_entrypoint.sh
 ```
 
 ---
@@ -57,7 +59,7 @@ python3 configure.py \
 # Example 2: Connecting to an internal network LiteLLM server
 python3 configure.py \
     --litellm-url "http://192.168.1.50:4000" \
-    --api-key "044cc23b73cc9e58e63e4aadf872d28ecf0d52b9182798a576c951ca8c95af40" \
+    --api-key "sk-your-litellm-api-key" \
     --port 3000
 ```
 
@@ -113,50 +115,25 @@ Execute the portable installer:
 1. **Preflight Checks:** Validates Docker, Docker Compose, and Python 3 availability.
 2. **LiteLLM Connectivity Test:** Tests `/health/liveliness`, authenticated model discovery (`/v1/models`), image discovery (`/images/v1/models`), and speech voices catalog (`/v1/audio/voices`).
 3. **Deployment Manifest Generation:** Synchronizes `docker-compose.yml` with `.env` settings.
-4. **Container Boot:** Starts `open-webui` (`ghcr.io/open-webui/open-webui:v0.13.4`).
+4. **Container Boot & Automatic Patch Application:** Starts `open-webui` (`ghcr.io/open-webui/open-webui:v0.13.4`) via `patches/v0.13.4/openwebui_realtime_entrypoint.sh`, which verifies SHA-256 fingerprints, preserves `.orig`, and atomically deploys the mobile realtime compatibility patch (`BnHPywC-.js`).
 5. **Health Wait:** Waits for Open WebUI's HTTP health check to succeed (up to 120s for initial model pull).
-6. **Stock Verification:** Confirms stock unpatched image execution.
+6. **Realtime Mobile Patch Verification:** Verifies `BnHPywC-.js` SHA-256 inside the running container via `patches/v0.13.4/patch_openwebui_v0134_realtime.py --status`.
 7. **Speech Coach Registration:** Automatically injects `speech_coach_tool.py` (v2.0.0) into the SQLite database and configures Valves (`litellm_base_url`, paths, key, timeout).
-8. **Image Connection Initialization:** Seeds `images.connections` in the database to link directly to LiteLLM's `/images/v1` routes.
+8. **Image Connection Initialization:** Idempotently seeds `images.connections` in the container database to link to LiteLLM's `/images/v1` routes without duplicating entries.
 9. **Idempotency Guarantee:** Can be run repeatedly without duplicating tools or corrupting configuration.
 
 ---
 
 ## 5. Post-Installation Verification
 
-Run the automated validation suite to verify all 14 integration targets:
+Run the automated validation suite to verify all 15 integration targets:
 
 ```bash
 python3 validate.py
 ```
 
-Expected output:
-```
-================================================================
-  Open WebUI Portable Deployment — Integration Validation Suite 
-================================================================
-Target LiteLLM URL:  https://litellm.example.com
-Target Open WebUI:   http://localhost:3000
-
- [PASS] LiteLLM Authentication & Key Isolation
- [PASS] Text Model Discovery & Model Separation (/v1/models)
- [PASS] Image Model Discovery & Separation (/images/v1/models)
- [PASS] Text Completion (/v1/chat/completions)
- [PASS] Audio TTS Speech Synthesis (/v1/audio/speech)
- [PASS] Audio STT Transcription (/v1/audio/transcriptions)
- [PASS] Speech Coach Voice Catalog (/v1/audio/voices)
- [PASS] Speech Coach Speaking Practice Analysis
- [PASS] Speech Coach Pronunciation Assessment
- [PASS] Realtime Voice WebSocket Handshake
- [PASS] Image Generation Reachability & Routing
- [PASS] Gateway Credential Isolation Check
- [PASS] End-to-End 3-Tier Routing Integrity
- [PASS] Open WebUI Container Healthcheck
-
-----------------------------------------------------------------
-ALL 14/14 VALIDATION TARGETS PASSED SUCCESSFULLY!
-----------------------------------------------------------------
-```
+Expected output includes:
+- LiteLLM authentication, text/image model separation, chat, TTS, STT, Speech Coach, Realtime WebSocket handshake, image generation reachability, credential isolation, 3-tier routing, Open WebUI healthcheck, and verified `BnHPywC-.js` SHA-256.
 
 ---
 

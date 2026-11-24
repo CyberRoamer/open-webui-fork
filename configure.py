@@ -31,7 +31,10 @@ def parse_env_file(path: Path) -> dict:
             continue
         if "=" in line:
             key, val = line.split("=", 1)
-            config[key.strip()] = val.strip()
+            val = val.strip()
+            while len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                val = val[1:-1].strip()
+            config[key.strip()] = val
     return config
 
 
@@ -58,6 +61,8 @@ def write_env_file(path: Path, config: dict):
         f"IMAGE_GENERATION_MODEL={config.get('IMAGE_GENERATION_MODEL', 'flux1-schnell')}",
         f"ENABLE_IMAGE_EDIT={config.get('ENABLE_IMAGE_EDIT', 'true')}",
         f"IMAGE_EDIT_ENGINE={config.get('IMAGE_EDIT_ENGINE', 'openai')}",
+        f"IMAGES_EDIT_OPENAI_API_BASE_URL={config.get('IMAGES_EDIT_OPENAI_API_BASE_URL', '${LITELLM_BASE_URL}/images/v1')}",
+        f"IMAGES_EDIT_OPENAI_API_KEY={config.get('IMAGES_EDIT_OPENAI_API_KEY', '${LITELLM_API_KEY}')}",
         f"IMAGE_EDIT_MODEL={config.get('IMAGE_EDIT_MODEL', 'flux1-schnell')}",
         "",
         "# Turn-Based Audio STT & TTS Endpoints",
@@ -233,6 +238,9 @@ def main():
             config["OPENAI_API_BASE_URL"] = f"{url}/v1"
         if not args.image_endpoint:
             config["IMAGES_OPENAI_API_BASE_URL"] = f"{url}/images/v1"
+        config["IMAGES_EDIT_OPENAI_API_BASE_URL"] = config.get("IMAGES_OPENAI_API_BASE_URL", f"{url}/images/v1")
+        if args.image_endpoint or not config.get("IMAGES_EDIT_OPENAI_API_BASE_URL"):
+            config["IMAGES_EDIT_OPENAI_API_BASE_URL"] = f"{url}/images/v1"
         config["AUDIO_STT_OPENAI_API_BASE_URL"] = f"{url}/v1"
         config["AUDIO_TTS_OPENAI_API_BASE_URL"] = f"{url}/v1"
         config["AUDIO_REALTIME_OPENAI_API_BASE_URL"] = f"{url}/v1"
@@ -243,6 +251,7 @@ def main():
         config["LITELLM_API_KEY"] = key
         config["OPENAI_API_KEY"] = key
         config["IMAGES_OPENAI_API_KEY"] = key
+        config["IMAGES_EDIT_OPENAI_API_KEY"] = key
         config["AUDIO_STT_OPENAI_API_KEY"] = key
         config["AUDIO_TTS_OPENAI_API_KEY"] = key
         config["AUDIO_REALTIME_OPENAI_API_KEY"] = key

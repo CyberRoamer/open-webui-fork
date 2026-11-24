@@ -6,12 +6,13 @@ This runbook describes the procedure for upgrading Open WebUI container images w
 
 ## 1. Upgrade Philosophy & Compatibility
 
-Because our deployment uses **stock container images with zero source-tree patch mounts**, upgrading Open WebUI is vastly simplified:
+Open WebUI v0.13.4 runs on the pinned upstream image `ghcr.io/open-webui/open-webui:v0.13.4` paired with a **single SHA-256-verified frontend compatibility patch** (`patches/v0.13.4/BnHPywC-.js`) for mobile realtime voice (44.1/48 kHz native AudioContext resampling and user-gesture audio unlock):
 
-1. **No Source Patch Merge Conflicts:** No JS bundles or Python router files in `/app/build` or `/app/backend` are monkey-patched. Upgrading does not require reapplying diffs to minified chunks.
-2. **Database Backward Compatibility:** Open WebUI uses Alembic for automatic schema migrations upon startup.
-3. **Persistent Custom Tools:** Custom tools (`speech_coach`) and their Valves reside in `webui.db` inside the persistent volume (`OPEN_WEBUI_DATA_DIR`).
-4. **Idempotent Re-registration:** Running `install.sh` or `register_tool.py` ensures that any new parameters or updated tool code are safely synced without creating duplicates.
+1. **Automatic Startup Patching & Upstream Safety:** `patches/v0.13.4/openwebui_realtime_entrypoint.sh` checks the container bundle's SHA-256 at boot. It patches only the exact known v0.13.4 bundle (`d2359a68d087ee9a7ab52895653e4f27f40b64f90f0ede8a0eb5c77729dbf33c` → `d5e4d07cfd5d13b4dfe0aa0d0dcb261ef2296d0ca6484f8ffcc7ac89187f67ab`), backs up `.orig`, and swaps atomically. When upgrading to a newer Open WebUI release (e.g., `v0.14.0+`) where `BnHPywC-.js` is absent or has a different hash, the entrypoint **refuses to overwrite** any unexpected bundle.
+2. **Legacy v0.11.1 Patches Retired:** No Python routers (`audio.py`, `images.py`) or v0.11.1 JS chunks (`D5GoHi-U.js`, `34.DRvNJD_W.js`, `fwivdHaq.js`) are patched in v0.13.4.
+3. **Database Backward Compatibility:** Open WebUI uses Alembic for automatic schema migrations upon startup.
+4. **Persistent Custom Tools:** Custom tools (`speech_coach` v2.0.0) and their Valves reside in `webui.db` inside the persistent volume (`OPEN_WEBUI_DATA_DIR`).
+5. **Idempotent Re-registration:** Running `install.sh` or `register_tool.py` safely syncs tool code, metadata (`2.0.0`), and Valves without creating duplicates.
 
 ---
 
@@ -113,6 +114,18 @@ All 14 tests must pass:
 ---
 
 ## 4. Rollback Procedure
+
+### A. Rollback Only the v0.13.4 Mobile Realtime Frontend Patch (Live Container)
+
+```bash
+python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --status
+python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --rollback
+# Reapply if needed:
+python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --patch
+```
+Note: `--rollback` verifies the preserved `.orig` backup (`d2359a68...`), swaps atomically, and fails nonzero if no valid original backup is available. To disable automatic patching across container recreations, remove the `entrypoint` and `/opt/realtime-patch/*` mounts from `docker-compose.yml`.
+
+### B. Full Container & Database Rollback
 
 If the new Open WebUI image encounters incompatibilities or bugs:
 

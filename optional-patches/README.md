@@ -3,8 +3,8 @@
 This directory contains legacy and optional patch artifacts from earlier iterations of our Open WebUI deployment (specifically Open WebUI v0.11.1), retained for auditability, historical reference, and emergency backward compatibility.
 
 > [!IMPORTANT]
-> **Production Open WebUI v0.13.4 does NOT require any frontend or backend patch files.**  
-> It operates using the stock, unpatched upstream container image (`ghcr.io/open-webui/open-webui:v0.13.4`). All custom enhancements (model separation, speech coaching, realtime voice, image generation, and audio endpoints) are now mediated cleanly through LiteLLM and Open WebUI's native configuration systems.
+> **Production Open WebUI v0.13.4 retires all legacy v0.11.1 backend/frontend patches** (`audio.py`, `images.py`, `D5GoHi-U.js`, `34.DRvNJD_W.js`, `fwivdHaq.js`).
+> For v0.13.4 mobile realtime voice compatibility (44.1/48 kHz native AudioContext resampling + user-gesture audio unlock), the active deployment uses the single SHA-256-verified patch in `patches/v0.13.4/` (`BnHPywC-.js` + `openwebui_realtime_entrypoint.sh`). All model separation, speech coaching, realtime signaling, image generation, and audio routing are mediated cleanly through LiteLLM.
 
 ---
 
@@ -12,7 +12,7 @@ This directory contains legacy and optional patch artifacts from earlier iterati
 
 | Subsystem / Feature | Legacy Approach (v0.11.1 Patches) | Modern Approach (v0.13.4 Native + LiteLLM) |
 | :--- | :--- | :--- |
-| **Realtime Voice Calls** | Frontend monkey-patch in `D5GoHi-U.js` injecting custom `RealtimeVoiceClient` class connecting to `/api/v1/audio/realtime/ws`. | **Native Feature:** Built-in OpenAI Realtime API support in Open WebUI v0.13.4 (`routers/audio/realtime.py`). Configured via `AUDIO_REALTIME_*` environment variables connecting to `ws://<litellm>:4000/v1/realtime?model=realtime-voice`. |
+| **Realtime Voice Calls** | Frontend monkey-patch in `D5GoHi-U.js` injecting custom `RealtimeVoiceClient` class connecting to `/api/v1/audio/realtime/ws`. | **Native + Mobile Resampler Patch:** Built-in OpenAI Realtime API bridge (`routers/audio/realtime.py`) routing via LiteLLM (`ws://<litellm>:4000/v1/realtime?model=realtime-voice`), plus SHA-256-verified `patches/v0.13.4/BnHPywC-.js` for native 44.1/48 kHz AudioWorklet resampling and mobile gesture unlock. |
 | **Image Model Discovery** | Frontend patches `34.DRvNJD_W.js` and `fwivdHaq.js` modifying DOM dropdown selectors and API client model forwarding. | **3-Tier Proxy Separation:** LiteLLM isolates routes: `GET /images/v1/models` returns strictly image models; `GET /v1/models` returns strictly text chat models. Open WebUI natively connects to `IMAGES_OPENAI_API_BASE_URL`. |
 | **Image Generation Backend** | Patch in `images.py` overriding backend router logic and query routing. | **Native Multi-Engine:** Open WebUI v0.13.4 natively supports multiple image connection configurations via `images.connections` and standard OpenAI image endpoints. |
 | **Speech Coach Tool** | Python tool connecting directly to internal gateway `http://gateway-api:8000/v1`. | **Portable Custom Tool (v2.0.0):** Native Open WebUI Custom Tool utilizing `Valves` (`litellm_base_url`, `speech_analysis_path`, `voices_path`, `api_key`, `timeout`) routing through LiteLLM proxy (`/v1/audio/speech-analysis` & `/v1/audio/voices`). |

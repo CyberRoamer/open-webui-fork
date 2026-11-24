@@ -17,6 +17,7 @@ staging-test/
 scratch/
 tmp/
 *.orig
+!patches/v0.13.4/BnHPywC-.js.orig
 *.bak
 
 # Python artifacts
