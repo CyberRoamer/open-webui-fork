@@ -9,8 +9,7 @@ import sys
 import shutil
 
 TARGET_FILES = [
-    "/mnt/ai-docker/litellm/open-webui-patches/D5GoHi-U.js",
-    "/mnt/ai-docker/gateway/open-webui-patches/D5GoHi-U.js",
+    "./open-webui-patches/D5GoHi-U.js",
 ]
 
 RT_CLASS_CODE = r"""
