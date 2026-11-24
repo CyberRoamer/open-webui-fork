@@ -131,7 +131,7 @@ After running `./install.sh`, perform the following one-time setup steps in your
 
 ## 5. Pushing to GitHub
 
-The repository is fully initialized locally on branch `main` with remote origin set to `git@github.com:CyberRoamer/open-webui-portable.git`.
+The repository is fully initialized locally on branch `main` with remote origin set to `git@github.com:CyberRoamer/open-webui-fork.git`.
 
 ### SSH Key Setup
 
