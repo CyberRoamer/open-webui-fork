@@ -1,6 +1,6 @@
 # Open WebUI Portable Deployment Package & Setup Guide
 
-This repository contains the complete, reusable, production-tested deployment package for our enhanced **Open WebUI v0.13.4** implementation. It enables deploying Open WebUI onto any physical or virtual system—on-premise, cloud VM, or developer workstation—connecting back to the **existing LiteLLM Proxy** on our central AI Gateway server.
+This repository contains the complete, reusable, production-tested deployment package for our enhanced **Open WebUI v0.13.5** implementation. It enables deploying Open WebUI onto any physical or virtual system—on-premise, cloud VM, or developer workstation—connecting back to the **existing LiteLLM Proxy** on our central AI Gateway server.
 
 ---
 
@@ -14,7 +14,7 @@ flowchart LR
 
     subgraph New_Node ["New System (Target Host)"]
         direction TB
-        OWUI["Open WebUI v0.13.4 (Stock Image)"]
+        OWUI["Open WebUI v0.13.5 (Stock Image)"]
         TOOLS["Custom Tools\n(Speech Coach v2.0.0)"]
         VALVES["Configured Valves\n(LiteLLM URL, Paths, Timeout)"]
         DATA[("Local Data Volume\n(webui.db)")]
@@ -47,7 +47,7 @@ flowchart LR
 
 1. **Zero Local Inference Infrastructure:** The target machine requires only Docker, Docker Compose, and Python 3. No local GPUs, Vulkan/ROCm drivers, or inference engines (`llama.cpp`, `sd.cpp`, Faster-Whisper, Piper) are needed.
 2. **Complete Credential & Network Isolation:** Open WebUI possesses **zero knowledge of Gateway credentials** (`GATEWAY_API_KEY`) and no direct network route to internal Gateway services (`gateway-api:8000`). All interactions are mediated through LiteLLM using a standard API key (`LITELLM_API_KEY`).
-3. **Pinned Stock Base + Verified Mobile Realtime Patch:** Open WebUI runs from `ghcr.io/open-webui/open-webui:v0.13.4` with a single SHA-256-verified frontend bundle patch (`patches/v0.13.4/BnHPywC-.js`) mounted read-only and applied automatically at startup (`openwebui_realtime_entrypoint.sh`) to add native 44.1/48 kHz AudioWorklet resampling and mobile touch/pointer audio unlock. Unexpected upstream bundle hashes are rejected automatically without overwriting. All legacy v0.11.1 monkey-patches remain retired.
+3. **Pinned Stock Base + Verified v0.13.5 Compatibility Patches:** Open WebUI runs from `ghcr.io/open-webui/open-webui:v0.13.5` with SHA-256-verified patches (`patches/v0.13.5/B1EqPYAs.js` for native 44.1/48 kHz AudioWorklet resampling and mobile touch/pointer audio unlock, plus `ask_user.py` and `builtin.py` allowing 0 or more options with text input) mounted read-only and applied automatically at startup (`openwebui_v0135_entrypoint.sh`). Unexpected upstream file hashes are rejected automatically without overwriting. All legacy v0.11.1 monkey-patches remain retired.
 4. **Strict Model Segregation:** LiteLLM isolates image models under `/images/v1/models`. The text chat model selector is never polluted with diffusion checkpoints.
 5. **Configurable Endpoint Mobility:** Every endpoint, key, path, port, and timeout is configurable via `.env` or `configure.py` without modifying Python source code.
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Open WebUI v0.13.4 Portable Installer
+# Open WebUI v0.13.5 Portable Installer
 # ==============================================================================
-# Repeatable, idempotent installer for Open WebUI v0.13.4 connecting to LiteLLM.
+# Repeatable, idempotent installer for Open WebUI v0.13.5 connecting to LiteLLM.
 # Preserves data, registers custom tools, configures valves, and avoids duplicate patches.
 # ==============================================================================
 
@@ -39,7 +39,7 @@ log_step() {
 }
 
 echo -e "${BOLD}================================================================${NC}"
-echo -e "${BOLD}  Open WebUI v0.13.4 Portable Deployment & Custom Experience Installer  ${NC}"
+echo -e "${BOLD}  Open WebUI v0.13.5 Portable Deployment & Custom Experience Installer  ${NC}"
 echo -e "${BOLD}================================================================${NC}"
 
 # ------------------------------------------------------------------------------
@@ -172,24 +172,24 @@ log_step "Step 5: Verifying Open WebUI Version"
 CONTAINER_IMG=$(docker inspect "$TARGET_CONTAINER" --format '{{.Config.Image}}')
 log_info "Container image: $CONTAINER_IMG"
 
-if [[ "$CONTAINER_IMG" == *"v0.13.4"* ]] || [[ "$CONTAINER_IMG" == *"0.13.4"* ]]; then
-    log_pass "Open WebUI version v0.13.4 confirmed."
+if [[ "$CONTAINER_IMG" == *"v0.13.5"* ]] || [[ "$CONTAINER_IMG" == *"0.13.5"* ]]; then
+    log_pass "Open WebUI version v0.13.5 confirmed."
 else
-    log_warn "Running image '$CONTAINER_IMG'. Target architecture is verified for v0.13.4."
+    log_warn "Running image '$CONTAINER_IMG'. Target architecture is verified for v0.13.5."
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Verify Realtime Mobile Compatibility Patch (v0.13.4)
+# 6. Verify v0.13.5 Realtime & ask_user Compatibility Patches
 # ------------------------------------------------------------------------------
-log_step "Step 6: Verifying Open WebUI v0.13.4 Realtime Mobile Patch"
+log_step "Step 6: Verifying Open WebUI v0.13.5 Compatibility Patches"
 
-log_info "Checking SHA-256 fingerprint of BnHPywC-.js inside '$TARGET_CONTAINER'..."
-if ! python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --status; then
-    log_warn "Bundle did not match expected patched state; attempting verified patch..."
-    python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --patch
-    python3 patches/v0.13.4/patch_openwebui_v0134_realtime.py --container "$TARGET_CONTAINER" --status
+log_info "Checking SHA-256 fingerprints of B1EqPYAs.js, ask_user.py, and builtin.py inside '$TARGET_CONTAINER'..."
+if ! python3 patches/v0.13.5/patch_openwebui_v0135.py --container "$TARGET_CONTAINER" --status; then
+    log_warn "Container files did not match expected patched state; attempting verified patch..."
+    python3 patches/v0.13.5/patch_openwebui_v0135.py --container "$TARGET_CONTAINER" --patch
+    python3 patches/v0.13.5/patch_openwebui_v0135.py --container "$TARGET_CONTAINER" --status
 fi
-log_pass "Open WebUI v0.13.4 realtime mobile compatibility patch verified."
+log_pass "Open WebUI v0.13.5 realtime mobile and ask_user compatibility patches verified."
 
 # ------------------------------------------------------------------------------
 # 7. Register & Configure Speech Coach Custom Tool & Valves

@@ -135,7 +135,7 @@ class Validator:
 
         if self.openwebui_url:
             tests.append(("Open WebUI Container Healthcheck", self.test_openwebui_health))
-            tests.append(("Open WebUI v0.13.4 Realtime Mobile Patch Check", self.test_openwebui_realtime_patch))
+            tests.append(("Open WebUI v0.13.5 Realtime Mobile Patch Check", self.test_openwebui_realtime_patch))
 
         passed = 0
         total = len(tests)
@@ -440,18 +440,18 @@ class Validator:
             return True, "Open WebUI container is healthy"
         return False, f"Open WebUI health check returned HTTP {status}"
 
-    # Optional: Open WebUI v0.13.4 Realtime Mobile Patch Verification
+    # Optional: Open WebUI v0.13.5 Realtime Mobile Patch Verification
     def test_openwebui_realtime_patch(self) -> tuple[bool, str]:
         import hashlib
-        expected_sha = "d5e4d07cfd5d13b4dfe0aa0d0dcb261ef2296d0ca6484f8ffcc7ac89187f67ab"
-        url = f"{self.openwebui_url}/_app/immutable/chunks/BnHPywC-.js"
+        expected_sha = "b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c"
+        url = f"{self.openwebui_url}/_app/immutable/chunks/B1EqPYAs.js"
         status, _, body = http_request(url, timeout=10.0)
         if status != 200:
-            return False, f"Failed to fetch BnHPywC-.js (HTTP {status})"
+            return False, f"Failed to fetch B1EqPYAs.js (HTTP {status})"
         actual_sha = hashlib.sha256(body).hexdigest()
         if actual_sha != expected_sha:
             return False, f"Bundle checksum mismatch: expected {expected_sha}, got {actual_sha}"
-        return True, f"Patched BnHPywC-.js served with verified SHA-256 ({actual_sha[:12]}...)"
+        return True, f"Patched B1EqPYAs.js served with verified SHA-256 ({actual_sha[:12]}...)"
 
 
 def main():

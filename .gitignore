@@ -18,6 +18,9 @@ scratch/
 tmp/
 *.orig
 !patches/v0.13.4/BnHPywC-.js.orig
+!patches/v0.13.5/B1EqPYAs.js.orig
+!patches/v0.13.5/ask_user.py.orig
+!patches/v0.13.5/builtin.py.orig
 *.bak
 
 # Python artifacts
