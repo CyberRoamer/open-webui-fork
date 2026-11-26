@@ -1,6 +1,6 @@
 FROM ghcr.io/open-webui/open-webui:v0.13.5
 
-# Bundle SHA-256-verified v0.13.5 mobile realtime, ask_user, and voice pipeline patches and Speech Coach tools
+# Bundle SHA-256-verified v0.13.5 mobile realtime, Standard Voice ask_user, Live Mode Speech Coach, and voice pipeline patches and Speech Coach tools
 COPY patches/v0.13.5/B1EqPYAs.js /opt/realtime-patch/B1EqPYAs.js
 COPY patches/v0.13.5/ask_user.py /opt/realtime-patch/ask_user.py
 COPY patches/v0.13.5/builtin.py /opt/realtime-patch/builtin.py
@@ -37,12 +37,12 @@ RUN chmod 0755 /opt/realtime-patch/entrypoint.sh && \
     install -m 0644 /opt/realtime-patch/audio_init.py /app/backend/open_webui/routers/audio/__init__.py && \
     install -m 0644 /opt/realtime-patch/audio_realtime.py /app/backend/open_webui/routers/audio/realtime.py && \
     printf '%s\n' \
-      'b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
+      '9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
       '984e19f255f7cadc6839147acee4502d58fd80f4c75ef7c90c61cb4fae89b16b  /app/backend/open_webui/utils/ask_user.py' \
       '7e0134597c37b08deb79845d84435c94b6fef3c0c342b58237934ddef18045b0  /app/backend/open_webui/tools/builtin.py' \
       '7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd  /app/backend/open_webui/utils/middleware.py' \
       '7a158f28d1b8f6b9efd6510686f95d4bc0d9a1d8b782dfb0e7f664d0b85bbc51  /app/backend/open_webui/utils/headers.py' \
-      '0fb8519ec57fec04c71cca89091b8815d3d01c40337cdbebd69b4f7426bddd36  /app/backend/open_webui/routers/audio/__init__.py' \
+      'c53adc2089bd45624586ea8e2f2ca71a47439a71b6951dae5f6fd109e2fc5122  /app/backend/open_webui/routers/audio/__init__.py' \
       '291be3c5819242791413c53b9ddd67892e3947198c300fac041bf58cdd81dd6b  /app/backend/open_webui/routers/audio/realtime.py' \
       | sha256sum -c -
 

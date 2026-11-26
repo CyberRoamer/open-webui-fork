@@ -899,7 +899,7 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     return data
 
 
-async def _transcribe_openai(request, file_path, filename, languages, file_dir, id, user=None):
+async def _transcribe_openai(request, file_path, filename, languages, file_dir, id, user=None, metadata=None):
     """Transcribe audio via an OpenAI-compatible STT endpoint."""
     r = None
     try:
@@ -922,10 +922,64 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         if user and ENABLE_FORWARD_USER_INFO_HEADERS:
             headers = include_user_info_headers(headers, user)
 
+        metadata = metadata or {}
+
+        if metadata.get('speech_coach'):
+            try:
+                coach_form = aiohttp.FormData()
+                coach_form.add_field('model', str(await Config.get('audio.stt.model') or 'whisper-1'))
+                coach_mode = metadata.get('speech_coach_mode') or 'interactive'
+                coach_form.add_field(
+                    'mode',
+                    'pronunciation' if coach_mode == 'practice' or metadata.get('reference_text') else 'fluency',
+                )
+                req_lang = (languages[0] if languages else None) or metadata.get('target_language')
+                if req_lang:
+                    coach_form.add_field('language', str(req_lang))
+                if metadata.get('target_language'):
+                    coach_form.add_field('target_language', str(metadata.get('target_language')))
+                if metadata.get('reference_text'):
+                    coach_form.add_field('reference_text', str(metadata.get('reference_text')))
+
+                async def coach_audio_chunks():
+                    async with aiofiles.open(file_path, 'rb') as audio_file:
+                        while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                            yield chunk
+
+                coach_form.add_field('file', coach_audio_chunks(), filename=filename)
+                r = await session.post(
+                    url=f'{api_base_url}/audio/speech-analysis',
+                    headers=headers,
+                    data=coach_form,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+                if r.status == 200:
+                    analysis = await r.json()
+                    data = {
+                        'text': (analysis.get('transcript') or analysis.get('text') or '').strip(),
+                        'speech_analysis': analysis,
+                    }
+                    lang_info = analysis.get('language')
+                    if isinstance(lang_info, dict) and lang_info.get('detected'):
+                        data['language'] = lang_info.get('detected')
+                    async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+                        await f.write(JSONCodec.dumps(data))
+                    return data
+            except Exception as coach_exc:
+                log.warning('Speech Coach /audio/speech-analysis fallback to /transcriptions: %s', coach_exc)
+
         for language in languages:
             payload = {'model': await Config.get('audio.stt.model')}
             if language:
                 payload['language'] = language
+            if metadata.get('speech_coach'):
+                payload['speech_coach'] = 'true'
+            if metadata.get('speech_coach_mode'):
+                payload['speech_coach_mode'] = metadata.get('speech_coach_mode')
+            if metadata.get('target_language'):
+                payload['target_language'] = metadata.get('target_language')
+            if metadata.get('reference_text'):
+                payload['reference_text'] = metadata.get('reference_text')
 
             if request_format == 'json':
                 ext = os.path.splitext(filename)[1].lower().lstrip('.') or 'wav'
@@ -1200,7 +1254,7 @@ async def transcription_handler(request, file_path, metadata, user=None):
     if engine_name == '':
         return await _transcribe_whisper(request, file_path, languages, file_dir, id)
     elif engine_name == 'openai':
-        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
+        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user, metadata)
     elif engine_name == 'deepgram':
         return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
     elif engine_name == 'azure':
@@ -1409,9 +1463,17 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
                 except Exception:
                     pass
 
-    return {
+    merged_result = {
         'text': ' '.join([result['text'] for result in results]),
     }
+    speech_analyses = [
+        result['speech_analysis']
+        for result in results
+        if isinstance(result, dict) and result.get('speech_analysis') is not None
+    ]
+    if speech_analyses:
+        merged_result['speech_analysis'] = speech_analyses[-1]
+    return merged_result
 
 
 def compress_audio(file_path):
@@ -1479,6 +1541,10 @@ async def transcription(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
+    speech_coach: Optional[str] = Form(None),
+    speech_coach_mode: Optional[str] = Form(None),
+    target_language: Optional[str] = Form(None),
+    reference_text: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     if user.role != 'admin' and not await has_permission(user.id, 'chat.stt', await Config.get('user.permissions')):
@@ -1523,12 +1589,20 @@ async def transcription(
             await f.write(contents)
 
         try:
-            metadata = None
+            metadata = {}
 
             if language:
-                metadata = {'language': language}
+                metadata['language'] = language
+            if speech_coach:
+                metadata['speech_coach'] = speech_coach
+            if speech_coach_mode:
+                metadata['speech_coach_mode'] = speech_coach_mode
+            if target_language:
+                metadata['target_language'] = target_language
+            if reference_text:
+                metadata['reference_text'] = reference_text
 
-            result = await transcribe(request, file_path, metadata, user)
+            result = await transcribe(request, file_path, metadata or None, user)
 
             await publish_event(
                 request,

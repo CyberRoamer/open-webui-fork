@@ -443,7 +443,7 @@ class Validator:
     # Optional: Open WebUI v0.13.5 Realtime Mobile Patch Verification
     def test_openwebui_realtime_patch(self) -> tuple[bool, str]:
         import hashlib
-        expected_sha = "b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c"
+        expected_sha = "9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9"
         url = f"{self.openwebui_url}/_app/immutable/chunks/B1EqPYAs.js"
         status, _, body = http_request(url, timeout=10.0)
         if status != 200:

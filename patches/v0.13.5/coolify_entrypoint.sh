@@ -166,7 +166,7 @@ apply_verified_patch \
   "/app/build/_app/immutable/chunks/B1EqPYAs.js.orig" \
   "/opt/realtime-patch/B1EqPYAs.js" \
   "29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c" \
-  "b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c"
+  "9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9"
 
 apply_verified_patch \
   "ask_user.py" \
@@ -206,7 +206,7 @@ apply_verified_patch \
   "/app/backend/open_webui/routers/audio/__init__.py.orig" \
   "/opt/realtime-patch/audio_init.py" \
   "f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40" \
-  "0fb8519ec57fec04c71cca89091b8815d3d01c40337cdbebd69b4f7426bddd36"
+  "c53adc2089bd45624586ea8e2f2ca71a47439a71b6951dae5f6fd109e2fc5122"
 
 apply_verified_patch \
   "audio_realtime.py" \
