@@ -43,7 +43,7 @@ This repository includes a self-contained [`Dockerfile`](Dockerfile) and [`docke
    - `AUDIO_REALTIME_TRANSCRIPTION_MODEL` = `whisper-1`
    - `WEBUI_NAME` = `Open WebUI`
 5. Click **Deploy**.
-   - At image build time, `Dockerfile` verifies upstream Open WebUI SHA-256 fingerprints and bakes in the `v0.13.5` mobile realtime (`B1EqPYAs.js`) and `ask_user` (`ask_user.py`, `builtin.py`) patches.
+   - At image build time, `Dockerfile` verifies upstream Open WebUI SHA-256 fingerprints and bakes in the `v0.13.5` mobile realtime (`B1EqPYAs.js`), `ask_user` (`ask_user.py`, `builtin.py`), and voice pipeline (`middleware.py`, `headers.py`, `audio_init.py`, `audio_realtime.py`) patches.
    - At startup, `coolify_entrypoint.sh` automatically registers the **Speech Coach** tool and syncs `images.connections` in `/app/backend/data/webui.db` once Open WebUI reports healthy.
 
 ---

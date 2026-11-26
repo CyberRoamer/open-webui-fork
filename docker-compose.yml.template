@@ -49,6 +49,10 @@ services:
       - ./patches/v0.13.5/B1EqPYAs.js:/opt/realtime-patch/B1EqPYAs.js:ro
       - ./patches/v0.13.5/ask_user.py:/opt/realtime-patch/ask_user.py:ro
       - ./patches/v0.13.5/builtin.py:/opt/realtime-patch/builtin.py:ro
+      - ./patches/v0.13.5/middleware.py:/opt/realtime-patch/middleware.py:ro
+      - ./patches/v0.13.5/headers.py:/opt/realtime-patch/headers.py:ro
+      - ./patches/v0.13.5/audio_init.py:/opt/realtime-patch/audio_init.py:ro
+      - ./patches/v0.13.5/audio_realtime.py:/opt/realtime-patch/audio_realtime.py:ro
       - ./patches/v0.13.5/openwebui_v0135_entrypoint.sh:/opt/realtime-patch/entrypoint.sh:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -137,6 +137,6 @@ python3 validate.py
      ```bash
      python3 patches/v0.13.5/patch_openwebui_v0135.py --status
      ```
-     Expected: `[PATCHED] B1EqPYAs.js (sha256=b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c, ...)` plus `[PATCHED] ask_user.py` and `[PATCHED] builtin.py`.
-  2. Check startup hook logs (`docker logs open-webui | grep v0135-patch`) and ensure `docker-compose.yml` mounts `./patches/v0.13.5/{B1EqPYAs.js,ask_user.py,builtin.py,openwebui_v0135_entrypoint.sh}`.
+     Expected: `[PATCHED] B1EqPYAs.js (sha256=b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c, ...)` plus `[PATCHED]` for `ask_user.py`, `builtin.py`, `middleware.py`, `headers.py`, `audio_init.py`, and `audio_realtime.py`.
+  2. Check startup hook logs (`docker logs open-webui | grep v0135-patch`) and ensure `docker-compose.yml` mounts all 7 patch files plus `openwebui_v0135_entrypoint.sh` from `./patches/v0.13.5/`.
   3. If `validate.py` fails the bundle checksum check on a non-v0.13.5 image, verify whether the container image tag was changed from `ghcr.io/open-webui/open-webui:v0.13.5`; the patcher intentionally refuses to overwrite unknown bundles.

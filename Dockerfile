@@ -1,29 +1,49 @@
 FROM ghcr.io/open-webui/open-webui:v0.13.5
 
-# Bundle SHA-256-verified v0.13.5 mobile realtime + ask_user patches and Speech Coach tools
+# Bundle SHA-256-verified v0.13.5 mobile realtime, ask_user, and voice pipeline patches and Speech Coach tools
 COPY patches/v0.13.5/B1EqPYAs.js /opt/realtime-patch/B1EqPYAs.js
 COPY patches/v0.13.5/ask_user.py /opt/realtime-patch/ask_user.py
 COPY patches/v0.13.5/builtin.py /opt/realtime-patch/builtin.py
+COPY patches/v0.13.5/middleware.py /opt/realtime-patch/middleware.py
+COPY patches/v0.13.5/headers.py /opt/realtime-patch/headers.py
+COPY patches/v0.13.5/audio_init.py /opt/realtime-patch/audio_init.py
+COPY patches/v0.13.5/audio_realtime.py /opt/realtime-patch/audio_realtime.py
 COPY patches/v0.13.5/coolify_entrypoint.sh /opt/realtime-patch/entrypoint.sh
 COPY tools/ /opt/openwebui-tools/
 
 RUN chmod 0755 /opt/realtime-patch/entrypoint.sh && \
-    chmod 0644 /opt/realtime-patch/B1EqPYAs.js /opt/realtime-patch/ask_user.py /opt/realtime-patch/builtin.py && \
+    chmod 0644 /opt/realtime-patch/B1EqPYAs.js /opt/realtime-patch/ask_user.py /opt/realtime-patch/builtin.py /opt/realtime-patch/middleware.py /opt/realtime-patch/headers.py /opt/realtime-patch/audio_init.py /opt/realtime-patch/audio_realtime.py && \
     printf '%s\n' \
       '29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
       '8538e5effbda42c310573e6a5be718b8ea655ddb90c5360b25bf1386a74e5c5d  /app/backend/open_webui/utils/ask_user.py' \
       '1bd4ce2bd8a8aaf180a5a0783a616519968de62eaea1c87b54536c51e560d59c  /app/backend/open_webui/tools/builtin.py' \
+      '919b4dc69c6356d65ed1198467710f00933de3b08825f5c5b96a5f3d5f066f7d  /app/backend/open_webui/utils/middleware.py' \
+      '2601a71db5eadd258d5dc89b40023d4c470063357bdeafe939cbcda45a32a432  /app/backend/open_webui/utils/headers.py' \
+      'f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40  /app/backend/open_webui/routers/audio/__init__.py' \
+      '0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830  /app/backend/open_webui/routers/audio/realtime.py' \
       | sha256sum -c - && \
     cp -p /app/build/_app/immutable/chunks/B1EqPYAs.js /app/build/_app/immutable/chunks/B1EqPYAs.js.orig && \
     cp -p /app/backend/open_webui/utils/ask_user.py /app/backend/open_webui/utils/ask_user.py.orig && \
     cp -p /app/backend/open_webui/tools/builtin.py /app/backend/open_webui/tools/builtin.py.orig && \
+    cp -p /app/backend/open_webui/utils/middleware.py /app/backend/open_webui/utils/middleware.py.orig && \
+    cp -p /app/backend/open_webui/utils/headers.py /app/backend/open_webui/utils/headers.py.orig && \
+    cp -p /app/backend/open_webui/routers/audio/__init__.py /app/backend/open_webui/routers/audio/__init__.py.orig && \
+    cp -p /app/backend/open_webui/routers/audio/realtime.py /app/backend/open_webui/routers/audio/realtime.py.orig && \
     install -m 0644 /opt/realtime-patch/B1EqPYAs.js /app/build/_app/immutable/chunks/B1EqPYAs.js && \
     install -m 0644 /opt/realtime-patch/ask_user.py /app/backend/open_webui/utils/ask_user.py && \
     install -m 0644 /opt/realtime-patch/builtin.py /app/backend/open_webui/tools/builtin.py && \
+    install -m 0644 /opt/realtime-patch/middleware.py /app/backend/open_webui/utils/middleware.py && \
+    install -m 0644 /opt/realtime-patch/headers.py /app/backend/open_webui/utils/headers.py && \
+    install -m 0644 /opt/realtime-patch/audio_init.py /app/backend/open_webui/routers/audio/__init__.py && \
+    install -m 0644 /opt/realtime-patch/audio_realtime.py /app/backend/open_webui/routers/audio/realtime.py && \
     printf '%s\n' \
       'b2644911f0aeb9c7786f004f6b725cef71bfc8363aa083be98e58371cdd3d86c  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
       '984e19f255f7cadc6839147acee4502d58fd80f4c75ef7c90c61cb4fae89b16b  /app/backend/open_webui/utils/ask_user.py' \
       '7e0134597c37b08deb79845d84435c94b6fef3c0c342b58237934ddef18045b0  /app/backend/open_webui/tools/builtin.py' \
+      '7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd  /app/backend/open_webui/utils/middleware.py' \
+      '7a158f28d1b8f6b9efd6510686f95d4bc0d9a1d8b782dfb0e7f664d0b85bbc51  /app/backend/open_webui/utils/headers.py' \
+      '0fb8519ec57fec04c71cca89091b8815d3d01c40337cdbebd69b4f7426bddd36  /app/backend/open_webui/routers/audio/__init__.py' \
+      '291be3c5819242791413c53b9ddd67892e3947198c300fac041bf58cdd81dd6b  /app/backend/open_webui/routers/audio/realtime.py' \
       | sha256sum -c -
 
 EXPOSE 8080

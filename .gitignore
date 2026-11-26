@@ -21,6 +21,10 @@ tmp/
 !patches/v0.13.5/B1EqPYAs.js.orig
 !patches/v0.13.5/ask_user.py.orig
 !patches/v0.13.5/builtin.py.orig
+!patches/v0.13.5/middleware.py.orig
+!patches/v0.13.5/headers.py.orig
+!patches/v0.13.5/audio_init.py.orig
+!patches/v0.13.5/audio_realtime.py.orig
 *.bak
 
 # Python artifacts

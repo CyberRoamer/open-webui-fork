@@ -183,7 +183,7 @@ fi
 # ------------------------------------------------------------------------------
 log_step "Step 6: Verifying Open WebUI v0.13.5 Compatibility Patches"
 
-log_info "Checking SHA-256 fingerprints of B1EqPYAs.js, ask_user.py, and builtin.py inside '$TARGET_CONTAINER'..."
+log_info "Checking SHA-256 fingerprints of v0.13.5 patches inside '$TARGET_CONTAINER'..."
 if ! python3 patches/v0.13.5/patch_openwebui_v0135.py --container "$TARGET_CONTAINER" --status; then
     log_warn "Container files did not match expected patched state; attempting verified patch..."
     python3 patches/v0.13.5/patch_openwebui_v0135.py --container "$TARGET_CONTAINER" --patch

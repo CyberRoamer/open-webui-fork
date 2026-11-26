@@ -63,6 +63,42 @@ TARGETS: tuple[PatchTarget, ...] = (
         expected_orig_sha256="1bd4ce2bd8a8aaf180a5a0783a616519968de62eaea1c87b54536c51e560d59c",
         expected_patched_sha256="7e0134597c37b08deb79845d84435c94b6fef3c0c342b58237934ddef18045b0",
     ),
+    PatchTarget(
+        name="middleware.py",
+        container_path="/app/backend/open_webui/utils/middleware.py",
+        backup_path="/app/backend/open_webui/utils/middleware.py.orig",
+        filename="middleware.py",
+        orig_filename="middleware.py.orig",
+        expected_orig_sha256="919b4dc69c6356d65ed1198467710f00933de3b08825f5c5b96a5f3d5f066f7d",
+        expected_patched_sha256="7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd",
+    ),
+    PatchTarget(
+        name="headers.py",
+        container_path="/app/backend/open_webui/utils/headers.py",
+        backup_path="/app/backend/open_webui/utils/headers.py.orig",
+        filename="headers.py",
+        orig_filename="headers.py.orig",
+        expected_orig_sha256="2601a71db5eadd258d5dc89b40023d4c470063357bdeafe939cbcda45a32a432",
+        expected_patched_sha256="7a158f28d1b8f6b9efd6510686f95d4bc0d9a1d8b782dfb0e7f664d0b85bbc51",
+    ),
+    PatchTarget(
+        name="audio_init.py",
+        container_path="/app/backend/open_webui/routers/audio/__init__.py",
+        backup_path="/app/backend/open_webui/routers/audio/__init__.py.orig",
+        filename="audio_init.py",
+        orig_filename="audio_init.py.orig",
+        expected_orig_sha256="f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40",
+        expected_patched_sha256="0fb8519ec57fec04c71cca89091b8815d3d01c40337cdbebd69b4f7426bddd36",
+    ),
+    PatchTarget(
+        name="audio_realtime.py",
+        container_path="/app/backend/open_webui/routers/audio/realtime.py",
+        backup_path="/app/backend/open_webui/routers/audio/realtime.py.orig",
+        filename="audio_realtime.py",
+        orig_filename="audio_realtime.py.orig",
+        expected_orig_sha256="0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830",
+        expected_patched_sha256="291be3c5819242791413c53b9ddd67892e3947198c300fac041bf58cdd81dd6b",
+    ),
 )
 
 
