@@ -43,7 +43,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="B1EqPYAs.js",
         orig_filename="B1EqPYAs.js.orig",
         expected_orig_sha256="29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c",
-        expected_patched_sha256="3da26db356ef03be969168ee1116cd5ad12b752192d275fbdbabb6c3e36eaa14",
+        expected_patched_sha256="a39794ef60a0d0c0571ff17499b458338f933ba8fc6c2e7761cba5bcafe72d90",
     ),
     PatchTarget(
         name="CaoI0pp2.js",
@@ -106,7 +106,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="audio_realtime.py",
         orig_filename="audio_realtime.py.orig",
         expected_orig_sha256="0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830",
-        expected_patched_sha256="9d1583e3ca81133f8a6b15a901a602cfa43b7e4c399126797dad383713d7a218",
+        expected_patched_sha256="442197a929490256ff5ad1fe74652950214550b500f083dc298414a83d578d09",
     ),
 )
 
