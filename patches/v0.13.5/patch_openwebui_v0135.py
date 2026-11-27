@@ -43,7 +43,16 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="B1EqPYAs.js",
         orig_filename="B1EqPYAs.js.orig",
         expected_orig_sha256="29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c",
-        expected_patched_sha256="9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9",
+        expected_patched_sha256="3da26db356ef03be969168ee1116cd5ad12b752192d275fbdbabb6c3e36eaa14",
+    ),
+    PatchTarget(
+        name="CaoI0pp2.js",
+        container_path="/app/build/_app/immutable/chunks/CaoI0pp2.js",
+        backup_path="/app/build/_app/immutable/chunks/CaoI0pp2.js.orig",
+        filename="CaoI0pp2.js",
+        orig_filename="CaoI0pp2.js.orig",
+        expected_orig_sha256="7611058e08d300631a1d481bea550389eba07a5ac873611e814139f86f5bdd94",
+        expected_patched_sha256="4ba267e48e304c3d5f4c720f665f397952863ea6ea5d4d762b137af3840e939e",
     ),
     PatchTarget(
         name="ask_user.py",
@@ -88,7 +97,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="audio_init.py",
         orig_filename="audio_init.py.orig",
         expected_orig_sha256="f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40",
-        expected_patched_sha256="c53adc2089bd45624586ea8e2f2ca71a47439a71b6951dae5f6fd109e2fc5122",
+        expected_patched_sha256="9265128cdb8f15ec5c9c0327a67bd9f7de2ac78ff3f65129199c6aa8c3567f17",
     ),
     PatchTarget(
         name="audio_realtime.py",
@@ -262,6 +271,19 @@ def apply_patch(container: str = DEFAULT_CONTAINER_NAME, patches_dir: str = DEFA
     print(f"Applying Open WebUI v0.13.5 patches to '{container}'...")
     for target in TARGETS:
         apply_target_patch(container, target, patches_dir)
+    versioner_local = os.path.join(patches_dir, "asset_versioner.py")
+    if os.path.isfile(versioner_local):
+        tmp_v = f"/tmp/asset_versioner_{os.getpid()}.py"
+        try:
+            run_cmd(["docker", "cp", versioner_local, f"{container}:{tmp_v}"])
+            out = run_cmd([
+                "docker", "exec", container, "python3", tmp_v,
+                "--build-dir", "/app/build", "--seeds", "B1EqPYAs.js", "CaoI0pp2.js",
+            ])
+            if out:
+                print(out)
+        finally:
+            subprocess.run(["docker", "exec", container, "rm", "-f", tmp_v], capture_output=True, text=True)
 
 
 def rollback_target(container: str, target: PatchTarget, patches_dir: str) -> None:
@@ -294,6 +316,14 @@ def rollback_target(container: str, target: PatchTarget, patches_dir: str) -> No
 
 def rollback(container: str = DEFAULT_CONTAINER_NAME, patches_dir: str = DEFAULT_PATCHES_DIR) -> None:
     print(f"Rolling back Open WebUI v0.13.5 patches in '{container}'...")
+    versioner_local = os.path.join(patches_dir, "asset_versioner.py")
+    if os.path.isfile(versioner_local):
+        tmp_v = f"/tmp/asset_versioner_rb_{os.getpid()}.py"
+        try:
+            run_cmd(["docker", "cp", versioner_local, f"{container}:{tmp_v}"])
+            run_cmd(["docker", "exec", container, "python3", tmp_v, "--build-dir", "/app/build", "--rollback"])
+        finally:
+            subprocess.run(["docker", "exec", container, "rm", "-f", tmp_v], capture_output=True, text=True)
     for target in TARGETS:
         rollback_target(container, target, patches_dir)
 

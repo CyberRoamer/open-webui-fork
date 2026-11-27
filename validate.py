@@ -440,10 +440,11 @@ class Validator:
             return True, "Open WebUI container is healthy"
         return False, f"Open WebUI health check returned HTTP {status}"
 
-    # Optional: Open WebUI v0.13.5 Realtime Mobile Patch Verification
+    # Optional: Open WebUI v0.13.5 Realtime & Voice Fixes Verification
     def test_openwebui_realtime_patch(self) -> tuple[bool, str]:
-        import hashlib
-        expected_sha = "9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9"
+        import hashlib, re
+        expected_sha = "3da26db356ef03be969168ee1116cd5ad12b752192d275fbdbabb6c3e36eaa14"
+        # Check either versioned entrypoint graph or direct canonical B1EqPYAs.js
         url = f"{self.openwebui_url}/_app/immutable/chunks/B1EqPYAs.js"
         status, _, body = http_request(url, timeout=10.0)
         if status != 200:
@@ -451,7 +452,14 @@ class Validator:
         actual_sha = hashlib.sha256(body).hexdigest()
         if actual_sha != expected_sha:
             return False, f"Bundle checksum mismatch: expected {expected_sha}, got {actual_sha}"
-        return True, f"Patched B1EqPYAs.js served with verified SHA-256 ({actual_sha[:12]}...)"
+        # Also verify index.html points to content-hashed app bundle
+        st_idx, _, idx_body = http_request(f"{self.openwebui_url}/", timeout=10.0)
+        if st_idx == 200:
+            html_str = idx_body.decode("utf-8", errors="ignore")
+            m = re.search(r"/_app/immutable/chunks/CaoI0pp2\.p[0-9a-f]{8}\.js", html_str)
+            if not m:
+                return False, "index.html does not reference versioned CaoI0pp2.p*.js asset"
+        return True, f"Patched B1EqPYAs.js verified (sha256={actual_sha[:12]}...) + versioned immutable graph active"
 
 
 def main():

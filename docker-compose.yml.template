@@ -47,6 +47,8 @@ services:
     volumes:
       - ${OPEN_WEBUI_DATA_DIR:-./data}:/app/backend/data
       - ./patches/v0.13.5/B1EqPYAs.js:/opt/realtime-patch/B1EqPYAs.js:ro
+      - ./patches/v0.13.5/CaoI0pp2.js:/opt/realtime-patch/CaoI0pp2.js:ro
+      - ./patches/v0.13.5/asset_versioner.py:/opt/realtime-patch/asset_versioner.py:ro
       - ./patches/v0.13.5/ask_user.py:/opt/realtime-patch/ask_user.py:ro
       - ./patches/v0.13.5/builtin.py:/opt/realtime-patch/builtin.py:ro
       - ./patches/v0.13.5/middleware.py:/opt/realtime-patch/middleware.py:ro

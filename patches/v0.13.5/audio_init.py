@@ -146,7 +146,21 @@ def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
     """
-    SUPPORTED_FORMATS = {'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'wav', 'webm'}
+    SUPPORTED_FORMATS = {'flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'wav', 'webm', 'ogg'}
+    SUPPORTED_CODECS = SUPPORTED_FORMATS | {
+        'opus',
+        'vorbis',
+        'mp3float',
+        'alac',
+        'pcm_s16le',
+        'pcm_s24le',
+        'pcm_s32le',
+        'pcm_f32le',
+        'pcm_f64le',
+        'pcm_u8',
+        'pcm_alaw',
+        'pcm_mulaw',
+    }
 
     if not os.path.isfile(file_path):
         log.error(f'File not found: {file_path}')
@@ -157,13 +171,18 @@ def is_audio_conversion_required(file_path):
         codec_name = info.get('codec_name', '').lower()
         codec_type = info.get('codec_type', '').lower()
         codec_tag_string = info.get('codec_tag_string', '').lower()
+        format_name = info.get('format_name', '').lower()
 
         if codec_name == 'aac' and codec_type == 'audio' and codec_tag_string == 'mp4a':
             # File is AAC/mp4a audio, recommend mp3 conversion
             return True
 
-        # If the codec name is in the supported formats
-        if codec_name in SUPPORTED_FORMATS:
+        # Preserve lossless PCM WAV and WebM/Ogg/Opus/FLAC/MP3 directly without lossy MP3 transcoding
+        if codec_name.startswith('pcm_') or codec_name in SUPPORTED_CODECS:
+            return False
+
+        # Fallback for container probes that report format_name without codec_name
+        if not codec_name and any(fmt in format_name for fmt in ('wav', 'webm', 'ogg', 'flac', 'mp3')):
             return False
 
         return True
@@ -929,11 +948,17 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                 coach_form = aiohttp.FormData()
                 coach_form.add_field('model', str(await Config.get('audio.stt.model') or 'whisper-1'))
                 coach_mode = metadata.get('speech_coach_mode') or 'interactive'
+                is_practice = coach_mode == 'practice' or bool(metadata.get('reference_text'))
                 coach_form.add_field(
                     'mode',
-                    'pronunciation' if coach_mode == 'practice' or metadata.get('reference_text') else 'fluency',
+                    'pronunciation' if is_practice else 'fluency',
                 )
-                req_lang = (languages[0] if languages else None) or metadata.get('target_language')
+                raw_req_lang = languages[0] if languages else None
+                if isinstance(raw_req_lang, str) and raw_req_lang.strip().lower() in ('', 'auto', 'detect', 'automatic'):
+                    raw_req_lang = None
+                # Only fall back to Coach target_language automatically during explicit practice exercises;
+                # interactive/passive conversation stays on Auto detection when STT language is Auto.
+                req_lang = raw_req_lang or (metadata.get('target_language') if is_practice else None)
                 if req_lang:
                     coach_form.add_field('language', str(req_lang))
                 if metadata.get('target_language'):
@@ -946,7 +971,13 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                         while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
                             yield chunk
 
-                coach_form.add_field('file', coach_audio_chunks(), filename=filename)
+                guessed_mime, _ = mimetypes.guess_type(filename)
+                coach_form.add_field(
+                    'file',
+                    coach_audio_chunks(),
+                    filename=filename,
+                    content_type=guessed_mime or 'application/octet-stream',
+                )
                 r = await session.post(
                     url=f'{api_base_url}/audio/speech-analysis',
                     headers=headers,
@@ -970,8 +1001,8 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
 
         for language in languages:
             payload = {'model': await Config.get('audio.stt.model')}
-            if language:
-                payload['language'] = language
+            if language and str(language).strip().lower() not in ('auto', 'detect', 'automatic'):
+                payload['language'] = str(language).strip()
             if metadata.get('speech_coach'):
                 payload['speech_coach'] = 'true'
             if metadata.get('speech_coach_mode'):
@@ -1005,7 +1036,13 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                         while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
                             yield chunk
 
-                form_data.add_field('file', audio_chunks(), filename=filename)
+                guessed_mime, _ = mimetypes.guess_type(filename)
+                form_data.add_field(
+                    'file',
+                    audio_chunks(),
+                    filename=filename,
+                    content_type=guessed_mime or 'application/octet-stream',
+                )
 
                 r = await session.post(
                     url=f'{api_base_url}/audio/transcriptions',
@@ -1243,7 +1280,12 @@ async def transcription_handler(request, file_path, metadata, user=None):
     requested_lang = metadata.get('language')
     if isinstance(requested_lang, str):
         requested_lang = requested_lang.strip() or None
-    primary_lang = requested_lang if requested_lang is not None else (WHISPER_LANGUAGE or None)
+    if isinstance(requested_lang, str) and requested_lang.lower() in ('auto', 'detect', 'automatic'):
+        requested_lang = None
+    env_default_lang = WHISPER_LANGUAGE
+    if isinstance(env_default_lang, str) and env_default_lang.strip().lower() in ('', 'auto', 'detect', 'automatic'):
+        env_default_lang = None
+    primary_lang = requested_lang if requested_lang is not None else env_default_lang
     engine_name = await Config.get('audio.stt.engine')
 
     if engine_name == 'openai':

@@ -74,7 +74,15 @@ apply_verified_patch \
   "/app/build/_app/immutable/chunks/B1EqPYAs.js.orig" \
   "/opt/realtime-patch/B1EqPYAs.js" \
   "29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c" \
-  "9e5e7c554ede4572644a53c7b839ab9e371b91a6a3194161d6734c6863f2c0e9"
+  "3da26db356ef03be969168ee1116cd5ad12b752192d275fbdbabb6c3e36eaa14"
+
+apply_verified_patch \
+  "CaoI0pp2.js" \
+  "/app/build/_app/immutable/chunks/CaoI0pp2.js" \
+  "/app/build/_app/immutable/chunks/CaoI0pp2.js.orig" \
+  "/opt/realtime-patch/CaoI0pp2.js" \
+  "7611058e08d300631a1d481bea550389eba07a5ac873611e814139f86f5bdd94" \
+  "4ba267e48e304c3d5f4c720f665f397952863ea6ea5d4d762b137af3840e939e"
 
 apply_verified_patch \
   "ask_user.py" \
@@ -114,7 +122,7 @@ apply_verified_patch \
   "/app/backend/open_webui/routers/audio/__init__.py.orig" \
   "/opt/realtime-patch/audio_init.py" \
   "f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40" \
-  "c53adc2089bd45624586ea8e2f2ca71a47439a71b6951dae5f6fd109e2fc5122"
+  "9265128cdb8f15ec5c9c0327a67bd9f7de2ac78ff3f65129199c6aa8c3567f17"
 
 apply_verified_patch \
   "audio_realtime.py" \
@@ -123,5 +131,9 @@ apply_verified_patch \
   "/opt/realtime-patch/audio_realtime.py" \
   "0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830" \
   "9d1583e3ca81133f8a6b15a901a602cfa43b7e4c399126797dad383713d7a218"
+
+if [[ -f /opt/realtime-patch/asset_versioner.py ]]; then
+  python3 /opt/realtime-patch/asset_versioner.py --build-dir /app/build --seeds B1EqPYAs.js CaoI0pp2.js
+fi
 
 exec bash /app/backend/start.sh "$@"
