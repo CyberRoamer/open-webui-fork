@@ -214,7 +214,7 @@ apply_verified_patch \
   "/app/backend/open_webui/routers/audio/realtime.py.orig" \
   "/opt/realtime-patch/audio_realtime.py" \
   "0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830" \
-  "291be3c5819242791413c53b9ddd67892e3947198c300fac041bf58cdd81dd6b"
+  "9d1583e3ca81133f8a6b15a901a602cfa43b7e4c399126797dad383713d7a218"
 
 bootstrap_tools_and_connections
 

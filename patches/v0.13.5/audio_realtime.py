@@ -35,25 +35,14 @@ CALL_STATUSES = {
     'deferred': 'Please complete the required settings or confirmation in chat, then try again.',
 }
 
-CHAT_TOOL = {
-    'type': 'function',
-    'name': 'generate_chat_completion',
-    'description': 'Handle substantive questions and tasks using the selected chat model, conversation history, '
-    'and configured tools. Use when new reasoning, information, or actions are needed. Always '
-    'use for questions about chat tools, capabilities, permissions, or model identity unless a '
-    'previous function result already answers them. Do not use for small talk, acknowledgments, '
-    'call status, clarification, repeating or rephrasing an available answer, or duplicating '
-    'pending or completed work.',
-    'parameters': {
-        'type': 'object',
-        'properties': {'request': {'type': 'string'}},
-        'required': ['request'],
-        'additionalProperties': False,
-    },
-}
+DIRECT_REALTIME_CALL_PROMPT = (
+    'You are the assistant in this live voice call, speaking directly with the user. '
+    'Answer questions and requests directly in brief, natural spoken sentences without internal monologue, '
+    'thinking tags, markdown formatting, or unsupported tool calls.'
+)
 
 AVATAR_CALL_INSTRUCTIONS = """
-Your avatar is your visible presence in this call. Use play_animation directly for available gestures, without chat-model delegation.
+Your avatar is your visible presence in this call. Use play_animation directly for available gestures.
 Treat gestures as your actions and converse naturally without narrating their implementation. Ground acknowledgments in the tool's actual result.
 """
 
@@ -235,14 +224,13 @@ class CallProtocol:
                 for k, v in self.response_metadata.get(response_id, {}).items()
                 if k in {'input_item_id', 'call_id'}
             }
-            # A gesture cannot cause a chain of gesture-only replies. Chat delegation remains available.
-            tools = [] if 'call_id' in metadata else [CHAT_TOOL]
+            # A gesture cannot cause a chain of gesture-only replies.
             return {
                 'type': 'response.create',
                 'response': {
                     'metadata': metadata,
-                    'tools': tools,
-                    'tool_choice': 'auto' if tools else 'none',
+                    'tools': [],
+                    'tool_choice': 'none',
                 },
             }
         if kind == 'bridge.result' and set(event) == {'type', 'call_id', 'status', 'answer'}:
@@ -403,8 +391,11 @@ async def realtime_call(ws: WebSocket):
             if not chat or chat.user_id != user.id:
                 raise ValueError('Chat not found')
         model_id = auth.get('model_id')
-        if not isinstance(model_id, str):
+        if not isinstance(model_id, str) or not model_id.strip():
             raise ValueError('Select a chat model')
+        model_id = model_id.strip()
+        if any(ch in model_id for ch in ('\r', '\n', '\x00')):
+            raise ValueError('Invalid chat model')
         agent_model = model_id.startswith('agent:')
         if agent_model:
             from open_webui.utils.agents.discovery import get_models as get_agent_models
@@ -439,10 +430,22 @@ async def realtime_call(ws: WebSocket):
                 await check_model_access(user, model, model_info=model_info)
             except Exception:
                 raise ValueError('Chat model access denied') from None
+
+        selected_chat_model = model_id
+        if not agent_model:
+            base_model_id = getattr(model_info, 'base_model_id', None) if model_info else None
+            if not base_model_id and isinstance(model, dict):
+                base_model_id = model.get('base_model_id')
+            if isinstance(base_model_id, str) and base_model_id.strip():
+                selected_chat_model = base_model_id.strip()
+        if any(ch in selected_chat_model for ch in ('\r', '\n', '\x00')):
+            raise ValueError('Invalid chat model')
+
         protocol = CallProtocol(
             model_info.meta.voice_avatar.gestures if model_info and model_info.meta.voice_avatar else ()
         )
-        override = ModelVoice.model_validate((model_info.meta.model_dump().get('voice') if model_info else None) or {})
+        model_meta_dict = model_info.meta.model_dump() if model_info and getattr(model_info, 'meta', None) else {}
+        override = ModelVoice.model_validate(model_meta_dict.get('voice') or {})
         voice_model = config.get('audio.realtime.model')
         voice = override.voice or config.get('audio.realtime.voice')
         if not voice_model or not voice or not config.get('audio.realtime.transcription_model'):
@@ -460,6 +463,8 @@ async def realtime_call(ws: WebSocket):
                 stt_profile = ws.headers.get('x-stt-profile')
                 if stt_profile:
                     headers['X-STT-Profile'] = stt_profile
+                if selected_chat_model and not agent_model:
+                    headers['X-Chat-Model'] = selected_chat_model
                 session = await get_session()
                 try:
                     upstream = await session.ws_connect(
@@ -482,41 +487,70 @@ async def realtime_call(ws: WebSocket):
             event = await upstream.receive_json()
             if event.get('type') != 'session.created':
                 raise ValueError('Provider did not create a voice session')
+            custom_prompt = (config.get('audio.realtime.prompt_template') or '').strip()
+            default_delegation_prompt = (DEFAULT_REALTIME_CALL_PROMPT_TEMPLATE or '').strip()
+            has_custom_prompt = bool(
+                custom_prompt
+                and custom_prompt != default_delegation_prompt
+                and 'generate_chat_completion' not in custom_prompt
+            )
+            model_params = model_meta_dict.get('params') if isinstance(model_meta_dict, dict) else None
+            model_system_prompt = (
+                (model_params.get('system') or '').strip() if isinstance(model_params, dict) else ''
+            )
+            if has_custom_prompt:
+                session_instructions = custom_prompt
+            elif model_system_prompt:
+                session_instructions = f'{model_system_prompt}\n\n{DIRECT_REALTIME_CALL_PROMPT}'
+            elif protocol.animation_tools:
+                session_instructions = DIRECT_REALTIME_CALL_PROMPT
+            else:
+                session_instructions = None
+            if session_instructions and protocol.animation_tools:
+                session_instructions = f'{session_instructions}\n{AVATAR_CALL_INSTRUCTIONS}'
+
+            session_update_payload = {
+                'type': 'realtime',
+                'output_modalities': ['audio'],
+                'audio': {
+                    'input': {
+                        'format': {'type': 'audio/pcm', 'rate': 24000},
+                        'transcription': {'model': config['audio.realtime.transcription_model']},
+                        # Wait for the finalized transcript before auto/manual turn actions.
+                        'turn_detection': {
+                            'type': 'server_vad',
+                            # The client pauses playback until speech is confirmed.
+                            'interrupt_response': False,
+                            'create_response': False,
+                        },
+                        **(config.get('audio.realtime.input_params') or {}),
+                    },
+                    'output': {'format': {'type': 'audio/pcm', 'rate': 24000}, 'voice': voice},
+                },
+                'tools': list(protocol.animation_tools),
+                'tool_choice': 'auto' if protocol.animation_tools else 'none',
+            }
+            if session_instructions:
+                session_update_payload['instructions'] = session_instructions
+
             await upstream.send_json(
                 {
                     'type': 'session.update',
-                    'session': {
-                        'type': 'realtime',
-                        'output_modalities': ['audio'],
-                        'instructions': (
-                            (config.get('audio.realtime.prompt_template') or DEFAULT_REALTIME_CALL_PROMPT_TEMPLATE)
-                            + (AVATAR_CALL_INSTRUCTIONS if protocol.animation_tools else '')
-                        ),
-                        'audio': {
-                            'input': {
-                                'format': {'type': 'audio/pcm', 'rate': 24000},
-                                'transcription': {'model': config['audio.realtime.transcription_model']},
-                                # Wait for the finalized transcript before requesting a response. This gives
-                                # every function call an unambiguous input_item_id, even during barge-in.
-                                'turn_detection': {
-                                    'type': 'server_vad',
-                                    # The client pauses playback until speech is confirmed.
-                                    'interrupt_response': False,
-                                    'create_response': False,
-                                },
-                                **(config.get('audio.realtime.input_params') or {}),
-                            },
-                            'output': {'format': {'type': 'audio/pcm', 'rate': 24000}, 'voice': voice},
-                        },
-                        'tools': [CHAT_TOOL, *protocol.animation_tools],
-                        'tool_choice': 'auto',
-                    },
+                    'session': session_update_payload,
                 }
             )
             event = await upstream.receive_json()
             if event.get('type') != 'session.updated':
                 raise ValueError('Provider rejected voice configuration. Check model, voice, and transcription model.')
-        await ws.send_json({'type': 'bridge.ready', 'model': voice_model, 'voice': voice, 'sample_rate': 24000})
+        await ws.send_json(
+            {
+                'type': 'bridge.ready',
+                'model': voice_model,
+                'chat_model': selected_chat_model,
+                'voice': voice,
+                'sample_rate': 24000,
+            }
+        )
 
         async def client_events():
             while True:

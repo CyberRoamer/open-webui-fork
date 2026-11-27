@@ -43,7 +43,7 @@ RUN chmod 0755 /opt/realtime-patch/entrypoint.sh && \
       '7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd  /app/backend/open_webui/utils/middleware.py' \
       '7a158f28d1b8f6b9efd6510686f95d4bc0d9a1d8b782dfb0e7f664d0b85bbc51  /app/backend/open_webui/utils/headers.py' \
       'c53adc2089bd45624586ea8e2f2ca71a47439a71b6951dae5f6fd109e2fc5122  /app/backend/open_webui/routers/audio/__init__.py' \
-      '291be3c5819242791413c53b9ddd67892e3947198c300fac041bf58cdd81dd6b  /app/backend/open_webui/routers/audio/realtime.py' \
+      '9d1583e3ca81133f8a6b15a901a602cfa43b7e4c399126797dad383713d7a218  /app/backend/open_webui/routers/audio/realtime.py' \
       | sha256sum -c -
 
 EXPOSE 8080
