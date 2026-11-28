@@ -947,12 +947,15 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
             try:
                 coach_form = aiohttp.FormData()
                 coach_form.add_field('model', str(await Config.get('audio.stt.model') or 'whisper-1'))
-                coach_mode = metadata.get('speech_coach_mode') or 'interactive'
+                coach_mode = (metadata.get('speech_coach_mode') or 'interactive').strip().lower()
                 is_practice = coach_mode == 'practice' or bool(metadata.get('reference_text'))
-                coach_form.add_field(
-                    'mode',
-                    'pronunciation' if is_practice else 'fluency',
-                )
+                if is_practice:
+                    coach_api_mode = 'pronunciation'
+                elif coach_mode == 'passive':
+                    coach_api_mode = 'passive'
+                else:
+                    coach_api_mode = 'speaking_practice'
+                coach_form.add_field('mode', coach_api_mode)
                 raw_req_lang = languages[0] if languages else None
                 if isinstance(raw_req_lang, str) and raw_req_lang.strip().lower() in ('', 'auto', 'detect', 'automatic'):
                     raw_req_lang = None
@@ -1005,6 +1008,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                 payload['language'] = str(language).strip()
             if metadata.get('speech_coach'):
                 payload['speech_coach'] = 'true'
+                payload['response_format'] = 'verbose_json'
             if metadata.get('speech_coach_mode'):
                 payload['speech_coach_mode'] = metadata.get('speech_coach_mode')
             if metadata.get('target_language'):

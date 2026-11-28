@@ -43,7 +43,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="B1EqPYAs.js",
         orig_filename="B1EqPYAs.js.orig",
         expected_orig_sha256="29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c",
-        expected_patched_sha256="a06505728d274ff254e73c83120d51bbe6c9082dcb881d59bde7d531adea7a58",
+        expected_patched_sha256="59001b722fe9096894da491f6b712e558e2b4e79e084eb295a4d02d21c25c982",
     ),
     PatchTarget(
         name="CaoI0pp2.js",
@@ -79,7 +79,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="middleware.py",
         orig_filename="middleware.py.orig",
         expected_orig_sha256="919b4dc69c6356d65ed1198467710f00933de3b08825f5c5b96a5f3d5f066f7d",
-        expected_patched_sha256="7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd",
+        expected_patched_sha256="c6b0dfb34adbce979c9de9d490e964b361894d621484cda288727e938166ac00",
     ),
     PatchTarget(
         name="headers.py",
@@ -97,7 +97,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="audio_init.py",
         orig_filename="audio_init.py.orig",
         expected_orig_sha256="f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40",
-        expected_patched_sha256="9265128cdb8f15ec5c9c0327a67bd9f7de2ac78ff3f65129199c6aa8c3567f17",
+        expected_patched_sha256="0a78a2c994febd120328cc64fb4091999e3d80ae5376fc48a885195824bbb2c8",
     ),
     PatchTarget(
         name="audio_realtime.py",

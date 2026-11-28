@@ -74,7 +74,7 @@ apply_verified_patch \
   "/app/build/_app/immutable/chunks/B1EqPYAs.js.orig" \
   "/opt/realtime-patch/B1EqPYAs.js" \
   "29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c" \
-  "a06505728d274ff254e73c83120d51bbe6c9082dcb881d59bde7d531adea7a58"
+  "59001b722fe9096894da491f6b712e558e2b4e79e084eb295a4d02d21c25c982"
 
 apply_verified_patch \
   "CaoI0pp2.js" \
@@ -106,7 +106,7 @@ apply_verified_patch \
   "/app/backend/open_webui/utils/middleware.py.orig" \
   "/opt/realtime-patch/middleware.py" \
   "919b4dc69c6356d65ed1198467710f00933de3b08825f5c5b96a5f3d5f066f7d" \
-  "7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd"
+  "c6b0dfb34adbce979c9de9d490e964b361894d621484cda288727e938166ac00"
 
 apply_verified_patch \
   "headers.py" \
@@ -122,7 +122,7 @@ apply_verified_patch \
   "/app/backend/open_webui/routers/audio/__init__.py.orig" \
   "/opt/realtime-patch/audio_init.py" \
   "f22233f795444da1773f07043e478b77f915bde5633580a9f231b4eed864dd40" \
-  "9265128cdb8f15ec5c9c0327a67bd9f7de2ac78ff3f65129199c6aa8c3567f17"
+  "0a78a2c994febd120328cc64fb4091999e3d80ae5376fc48a885195824bbb2c8"
 
 apply_verified_patch \
   "audio_realtime.py" \

@@ -2454,6 +2454,99 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
 
+            coach_cfg = features.get('speech_coach')
+            if isinstance(coach_cfg, dict) and coach_cfg.get('enabled', True):
+                coach_mode = str(coach_cfg.get('mode') or '').strip().lower()
+                target_lang = str(coach_cfg.get('target_language') or 'en').strip() or 'en'
+                telemetry = coach_cfg.get('telemetry') if isinstance(coach_cfg.get('telemetry'), dict) else {}
+
+                if coach_mode == 'interactive':
+                    detected_lang = str(telemetry.get('detected_language') or 'auto')
+                    wpm = telemetry.get('wpm', 0)
+                    rate_cat = str(telemetry.get('rate_category') or 'normal')
+                    fluency = str(telemetry.get('fluency_rating') or 'good')
+                    fillers_raw = telemetry.get('filler_words') or []
+                    if isinstance(fillers_raw, list):
+                        filler_names = [str(f.get('word') if isinstance(f, dict) else f) for f in fillers_raw if f]
+                    else:
+                        filler_names = []
+                    pause_cnt = telemetry.get('pause_count', 0)
+                    long_pauses = telemetry.get('long_pause_count', 0)
+                    obs_list = [str(o) for o in (telemetry.get('observations') or []) if o][:3]
+                    fb_list = [str(f) for f in (telemetry.get('feedback') or []) if f][:2]
+
+                    telem_parts = [
+                        f"Target={target_lang}",
+                        f"Detected={detected_lang}",
+                        f"WPM={wpm} ({rate_cat})",
+                        f"Fluency={fluency}",
+                        f"Pauses={pause_cnt} (long={long_pauses})",
+                        f"Fillers={len(filler_names)}" + (f" [{', '.join(filler_names[:5])}]" if filler_names else ""),
+                    ]
+                    if obs_list:
+                        telem_parts.append("Observations: " + "; ".join(obs_list))
+                    if fb_list:
+                        telem_parts.append("Guidance: " + "; ".join(fb_list))
+
+                    coach_sys = (
+                        f"[Speech Coach: Interactive Mode]\n"
+                        f"You are the user's active Speech Coach for {target_lang}.\n"
+                        f"Live Speech Telemetry: {' | '.join(telem_parts)}\n"
+                        f"REQUIRED RESPONSE STRUCTURE:\n"
+                        f"1. ALWAYS begin your reply with exactly ONE short, encouraging coaching sentence "
+                        f"(either correcting a grammar/vocabulary slip in what the user just said, or giving one concrete "
+                        f"delivery tip from the telemetry such as filler words, pacing/WPM, or pauses; if both phrasing "
+                        f"and delivery are clean, briefly praise one specific strength).\n"
+                        f"2. Immediately follow with 1 to 2 natural spoken sentences continuing the conversation.\n"
+                        f"Do not skip step 1. Output plain spoken prose without markdown or bullet lists."
+                    )
+                    form_data['messages'] = add_or_update_system_message(
+                        coach_sys,
+                        form_data['messages'],
+                        append=True,
+                    )
+                elif coach_mode == 'practice':
+                    ref_sent = str(telemetry.get('reference_text') or '').strip()
+                    spoken_txt = str(telemetry.get('spoken_text') or '').strip()
+                    acc_pct = telemetry.get('accuracy_pct', 100)
+                    wpm = telemetry.get('wpm', 0)
+                    flagged = ', '.join(str(w) for w in (telemetry.get('flagged_words') or []) if w) or 'None'
+                    tips = '; '.join(str(t) for t in (telemetry.get('phonetic_tips') or []) if t) or 'Clear articulation'
+
+                    coach_sys = (
+                        f"[Speech Coach: Practice Mode]\n"
+                        f"You are coaching the user's pronunciation in {target_lang}.\n"
+                        f"Attempt Telemetry: Target=\"{ref_sent}\" | Spoken=\"{spoken_txt}\" | "
+                        f"Accuracy={acc_pct}% | WPM={wpm} | Flagged Words={flagged} | Phonetic Tips={tips}\n"
+                        f"REQUIRED RESPONSE STRUCTURE:\n"
+                        f"1. Give 1 to 2 short, encouraging spoken sentences of pronunciation feedback referencing "
+                        f"their accuracy and any flagged words above.\n"
+                        f"2. End your reply on a new line with a DIFFERENT practice sentence in {target_lang} "
+                        f"using this exact format:\n"
+                        f"Next sentence: \"<new practice sentence>\"\n"
+                        f"Do not repeat \"{ref_sent}\". Output plain spoken prose without markdown bullets."
+                    )
+                    form_data['messages'] = add_or_update_system_message(
+                        coach_sys,
+                        form_data['messages'],
+                        append=True,
+                    )
+                # Passive mode ('passive') intentionally injects nothing into the LLM prompt.
+
+                # Ensure legacy inline coach blocks never clutter the LLM user turn
+                if coach_mode in ('interactive', 'practice') and isinstance(form_data.get('messages'), list):
+                    for msg in reversed(form_data['messages']):
+                        if isinstance(msg, dict) and msg.get('role') == 'user' and isinstance(msg.get('content'), str):
+                            cleaned_u = re.sub(
+                                r'\n*\s*\[Speech Coach Context:[^\n]*\](?:\n*\s*\(Coach note:[^\n]*\))?\s*$',
+                                '',
+                                msg['content'],
+                                flags=re.IGNORECASE,
+                            ).strip()
+                            if cleaned_u:
+                                msg['content'] = cleaned_u
+                            break
+
         if not use_builtin_tools and await memory_context_enabled(user, features):
             form_data = await add_memory_context(request, form_data, user, model)
 
