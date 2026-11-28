@@ -43,7 +43,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="B1EqPYAs.js",
         orig_filename="B1EqPYAs.js.orig",
         expected_orig_sha256="29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c",
-        expected_patched_sha256="59001b722fe9096894da491f6b712e558e2b4e79e084eb295a4d02d21c25c982",
+        expected_patched_sha256="58565200ca395b48424d4b87433fdaffe8bfaa3b522cacb7e6e89934c3699a9c",
     ),
     PatchTarget(
         name="CaoI0pp2.js",
@@ -79,7 +79,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="middleware.py",
         orig_filename="middleware.py.orig",
         expected_orig_sha256="919b4dc69c6356d65ed1198467710f00933de3b08825f5c5b96a5f3d5f066f7d",
-        expected_patched_sha256="c6b0dfb34adbce979c9de9d490e964b361894d621484cda288727e938166ac00",
+        expected_patched_sha256="9642b456d141bdf1447d5c29cc820a8946a54fa7c75841b86026b5de12621ff4",
     ),
     PatchTarget(
         name="headers.py",

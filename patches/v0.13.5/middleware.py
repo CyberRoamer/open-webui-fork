@@ -2457,7 +2457,29 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             coach_cfg = features.get('speech_coach')
             if isinstance(coach_cfg, dict) and coach_cfg.get('enabled', True):
                 coach_mode = str(coach_cfg.get('mode') or '').strip().lower()
-                target_lang = str(coach_cfg.get('target_language') or 'en').strip() or 'en'
+                raw_target_lang = str(coach_cfg.get('target_language') or 'en').strip() or 'en'
+                norm_target_lang = raw_target_lang.lower().split('-')[0].split('_')[0] or 'en'
+                lang_names = {
+                    'en': 'English',
+                    'hi': 'Hindi',
+                    'es': 'Spanish',
+                    'fr': 'French',
+                    'de': 'German',
+                    'it': 'Italian',
+                    'pt': 'Portuguese',
+                    'ru': 'Russian',
+                    'zh': 'Chinese',
+                    'ar': 'Arabic',
+                    'ja': 'Japanese',
+                    'ko': 'Korean',
+                }
+                target_lang = norm_target_lang
+                target_lang_name = lang_names.get(norm_target_lang, raw_target_lang)
+                lang_rule = (
+                    f"CRITICAL LANGUAGE REQUIREMENT: You MUST respond strictly in {target_lang_name} ({target_lang}). "
+                    f"Every part of your reply—coaching feedback, corrections, encouragement, and any practice sentence—MUST be written in {target_lang_name}. "
+                    + ("Do NOT reply in English." if target_lang != 'en' else "")
+                ).strip()
                 telemetry = coach_cfg.get('telemetry') if isinstance(coach_cfg.get('telemetry'), dict) else {}
 
                 if coach_mode == 'interactive':
@@ -2476,7 +2498,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     fb_list = [str(f) for f in (telemetry.get('feedback') or []) if f][:2]
 
                     telem_parts = [
-                        f"Target={target_lang}",
+                        f"Target={target_lang_name} ({target_lang})",
                         f"Detected={detected_lang}",
                         f"WPM={wpm} ({rate_cat})",
                         f"Fluency={fluency}",
@@ -2490,14 +2512,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                     coach_sys = (
                         f"[Speech Coach: Interactive Mode]\n"
-                        f"You are the user's active Speech Coach for {target_lang}.\n"
+                        f"You are the user's active Speech Coach for {target_lang_name} ({target_lang}).\n"
+                        f"{lang_rule}\n"
                         f"Live Speech Telemetry: {' | '.join(telem_parts)}\n"
                         f"REQUIRED RESPONSE STRUCTURE:\n"
-                        f"1. ALWAYS begin your reply with exactly ONE short, encouraging coaching sentence "
+                        f"1. ALWAYS begin your reply in {target_lang_name} with exactly ONE short, encouraging coaching sentence "
                         f"(either correcting a grammar/vocabulary slip in what the user just said, or giving one concrete "
                         f"delivery tip from the telemetry such as filler words, pacing/WPM, or pauses; if both phrasing "
                         f"and delivery are clean, briefly praise one specific strength).\n"
-                        f"2. Immediately follow with 1 to 2 natural spoken sentences continuing the conversation.\n"
+                        f"2. Immediately follow in {target_lang_name} with 1 to 2 natural spoken sentences continuing the conversation.\n"
                         f"Do not skip step 1. Output plain spoken prose without markdown or bullet lists."
                     )
                     form_data['messages'] = add_or_update_system_message(
@@ -2508,24 +2531,48 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 elif coach_mode == 'practice':
                     ref_sent = str(telemetry.get('reference_text') or '').strip()
                     spoken_txt = str(telemetry.get('spoken_text') or '').strip()
-                    acc_pct = telemetry.get('accuracy_pct', 100)
+                    raw_acc = telemetry.get('accuracy_pct', 100)
+                    try:
+                        acc_pct = int(round(float(raw_acc)))
+                    except (TypeError, ValueError):
+                        acc_pct = 100
                     wpm = telemetry.get('wpm', 0)
-                    flagged = ', '.join(str(w) for w in (telemetry.get('flagged_words') or []) if w) or 'None'
+                    word_details = str(telemetry.get('word_details') or '').strip()
+                    flagged = word_details or (', '.join(str(w) for w in (telemetry.get('flagged_words') or []) if w) or 'None')
                     tips = '; '.join(str(t) for t in (telemetry.get('phonetic_tips') or []) if t) or 'Clear articulation'
+                    has_attempt = bool(ref_sent and spoken_txt)
 
-                    coach_sys = (
-                        f"[Speech Coach: Practice Mode]\n"
-                        f"You are coaching the user's pronunciation in {target_lang}.\n"
-                        f"Attempt Telemetry: Target=\"{ref_sent}\" | Spoken=\"{spoken_txt}\" | "
-                        f"Accuracy={acc_pct}% | WPM={wpm} | Flagged Words={flagged} | Phonetic Tips={tips}\n"
-                        f"REQUIRED RESPONSE STRUCTURE:\n"
-                        f"1. Give 1 to 2 short, encouraging spoken sentences of pronunciation feedback referencing "
-                        f"their accuracy and any flagged words above.\n"
-                        f"2. End your reply on a new line with a DIFFERENT practice sentence in {target_lang} "
-                        f"using this exact format:\n"
-                        f"Next sentence: \"<new practice sentence>\"\n"
-                        f"Do not repeat \"{ref_sent}\". Output plain spoken prose without markdown bullets."
-                    )
+                    if has_attempt and acc_pct < 80:
+                        coach_sys = (
+                            f"[Speech Coach: Practice Mode]\n"
+                            f"You are coaching the user's pronunciation in {target_lang_name} ({target_lang}).\n"
+                            f"{lang_rule}\n"
+                            f"Attempt Telemetry: Target=\"{ref_sent}\" | Spoken=\"{spoken_txt}\" | "
+                            f"Accuracy={acc_pct}% | WPM={wpm} | Flagged Words={flagged} | Phonetic Tips={tips}\n"
+                            f"REQUIRED RESPONSE STRUCTURE (RETRY REQUIRED — Accuracy {acc_pct}% is below 80%):\n"
+                            f"1. Give 1 to 2 short, encouraging spoken sentences in {target_lang_name} referencing "
+                            f"their accuracy ({acc_pct}%), what differed between the target and what was heard, and any flagged words above.\n"
+                            f"2. Ask the user to try the SAME target sentence again.\n"
+                            f"3. Do NOT introduce a new sentence and do NOT output \"Next sentence:\" or \"New Sentence:\". "
+                            f"End your reply on a new line with:\n"
+                            f"Retry sentence: \"{ref_sent}\"\n"
+                            f"Output plain spoken prose without markdown bullets."
+                        )
+                    else:
+                        coach_sys = (
+                            f"[Speech Coach: Practice Mode]\n"
+                            f"You are coaching the user's pronunciation in {target_lang_name} ({target_lang}).\n"
+                            f"{lang_rule}\n"
+                            f"Attempt Telemetry: Target=\"{ref_sent}\" | Spoken=\"{spoken_txt}\" | "
+                            f"Accuracy={acc_pct}% | WPM={wpm} | Flagged Words={flagged} | Phonetic Tips={tips}\n"
+                            f"REQUIRED RESPONSE STRUCTURE:\n"
+                            f"1. Give 1 to 2 short, encouraging spoken sentences of pronunciation feedback in {target_lang_name} referencing "
+                            f"their accuracy and any flagged words above.\n"
+                            f"2. End your reply on a new line with ONE DIFFERENT practice sentence in {target_lang_name} "
+                            f"using this exact format:\n"
+                            f"Next sentence: \"<new practice sentence>\"\n"
+                            f"Do not repeat \"{ref_sent}\" and do not tell the user to try the old sentence again. Output plain spoken prose without markdown bullets."
+                        )
                     form_data['messages'] = add_or_update_system_message(
                         coach_sys,
                         form_data['messages'],
