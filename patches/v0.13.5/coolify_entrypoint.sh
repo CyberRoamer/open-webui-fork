@@ -166,7 +166,7 @@ apply_verified_patch \
   "/app/build/_app/immutable/chunks/B1EqPYAs.js.orig" \
   "/opt/realtime-patch/B1EqPYAs.js" \
   "29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c" \
-  "a39794ef60a0d0c0571ff17499b458338f933ba8fc6c2e7761cba5bcafe72d90"
+  "a06505728d274ff254e73c83120d51bbe6c9082dcb881d59bde7d531adea7a58"
 
 apply_verified_patch \
   "CaoI0pp2.js" \
@@ -222,7 +222,7 @@ apply_verified_patch \
   "/app/backend/open_webui/routers/audio/realtime.py.orig" \
   "/opt/realtime-patch/audio_realtime.py" \
   "0226a1501401e08804c3501474de847e454d12f98ae938eb83cfc678e1b4a830" \
-  "442197a929490256ff5ad1fe74652950214550b500f083dc298414a83d578d09"
+  "724fb7e162aaeeb90f137ea2828ab0a98da738b07f8998f023a93540aaddcb5b"
 
 if [[ -f /opt/realtime-patch/asset_versioner.py ]]; then
   python3 /opt/realtime-patch/asset_versioner.py --build-dir /app/build --seeds B1EqPYAs.js CaoI0pp2.js

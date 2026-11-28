@@ -443,7 +443,7 @@ class Validator:
     # Optional: Open WebUI v0.13.5 Realtime & Voice Fixes Verification
     def test_openwebui_realtime_patch(self) -> tuple[bool, str]:
         import hashlib, re
-        expected_sha = "a39794ef60a0d0c0571ff17499b458338f933ba8fc6c2e7761cba5bcafe72d90"
+        expected_sha = "a06505728d274ff254e73c83120d51bbe6c9082dcb881d59bde7d531adea7a58"
         # Check either versioned entrypoint graph or direct canonical B1EqPYAs.js
         url = f"{self.openwebui_url}/_app/immutable/chunks/B1EqPYAs.js"
         status, _, body = http_request(url, timeout=10.0)

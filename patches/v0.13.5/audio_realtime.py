@@ -95,6 +95,15 @@ ASK_USER_REALTIME_TOOL = {
 }
 
 
+RECOVERABLE_PROVIDER_ERROR_CODES = {
+    'response_cancel_not_active',
+    'stt_timeout',
+    'stt_transcription_failed',
+    'transcription_failed',
+    'transcription_timeout',
+    'transcription_queue_full',
+}
+
 class CallProtocol:
     """Connection-local IDs and the client command allowlist; never forwards arbitrary session settings."""
 
@@ -712,9 +721,20 @@ async def realtime_call(ws: WebSocket):
                 if not isinstance(event, dict):
                     raise ValueError('Invalid provider event')
                 kind = event.get('type', '')
-                if kind == 'error' and event.get('error', {}).get('code') == 'response_cancel_not_active':
-                    continue  # Server VAD may finish cancellation before our explicit cancel arrives.
                 if kind == 'error':
+                    err_obj = event.get('error') if isinstance(event.get('error'), dict) else {}
+                    err_code = str(err_obj.get('code') or event.get('code') or '').strip()
+                    if err_code == 'response_cancel_not_active':
+                        continue  # Server VAD may finish cancellation before our explicit cancel arrives.
+                    if err_code in RECOVERABLE_PROVIDER_ERROR_CODES:
+                        log.warning('Recoverable voice provider STT/queue event (%s); keeping call session active.', err_code)
+                        async with asyncio.timeout(5):
+                            await ws.send_json({
+                                'type': 'bridge.error',
+                                'message': 'A voice segment could not be transcribed. Please try again.',
+                                'fatal': False,
+                            })
+                        continue
                     # Provider error text can include prompts or credentials.
                     raise ValueError('Voice provider rejected a request')
                 command = protocol.observe(event)
