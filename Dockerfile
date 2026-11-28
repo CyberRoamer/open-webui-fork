@@ -42,14 +42,14 @@ RUN chmod 0755 /opt/realtime-patch/entrypoint.sh && \
     install -m 0644 /opt/realtime-patch/audio_init.py /app/backend/open_webui/routers/audio/__init__.py && \
     install -m 0644 /opt/realtime-patch/audio_realtime.py /app/backend/open_webui/routers/audio/realtime.py && \
     printf '%s\n' \
-      '3da26db356ef03be969168ee1116cd5ad12b752192d275fbdbabb6c3e36eaa14  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
+      'a39794ef60a0d0c0571ff17499b458338f933ba8fc6c2e7761cba5bcafe72d90  /app/build/_app/immutable/chunks/B1EqPYAs.js' \
       '4ba267e48e304c3d5f4c720f665f397952863ea6ea5d4d762b137af3840e939e  /app/build/_app/immutable/chunks/CaoI0pp2.js' \
       '984e19f255f7cadc6839147acee4502d58fd80f4c75ef7c90c61cb4fae89b16b  /app/backend/open_webui/utils/ask_user.py' \
       '7e0134597c37b08deb79845d84435c94b6fef3c0c342b58237934ddef18045b0  /app/backend/open_webui/tools/builtin.py' \
       '7fac507d50b85c8296318876cd914402954eaa200c8678e64e244852c32ebccd  /app/backend/open_webui/utils/middleware.py' \
       '7a158f28d1b8f6b9efd6510686f95d4bc0d9a1d8b782dfb0e7f664d0b85bbc51  /app/backend/open_webui/utils/headers.py' \
       '9265128cdb8f15ec5c9c0327a67bd9f7de2ac78ff3f65129199c6aa8c3567f17  /app/backend/open_webui/routers/audio/__init__.py' \
-      '9d1583e3ca81133f8a6b15a901a602cfa43b7e4c399126797dad383713d7a218  /app/backend/open_webui/routers/audio/realtime.py' \
+      '442197a929490256ff5ad1fe74652950214550b500f083dc298414a83d578d09  /app/backend/open_webui/routers/audio/realtime.py' \
       | sha256sum -c - && \
     python3 /opt/realtime-patch/asset_versioner.py --build-dir /app/build --seeds B1EqPYAs.js CaoI0pp2.js
 
