@@ -278,7 +278,9 @@ if (typeof window !== "undefined" && !window.__speech_coach_v2_initialized) {
         .replace(/'/g, "&#39;");
 
     const _scNorm = (val) => String(val ?? "")
+        .normalize("NFKC")
         .toLowerCase()
+        .replace(/[\u0610-\u061A\u0640\u064B-\u065F\u0670]/g, "")
         .replace(/[\u2018\u2019\u201C\u201D"«»「」『』]/g, "")
         .replace(/[.,!?;:।॥。？！…]+$/g, "")
         .replace(/\s+/g, " ")
@@ -354,7 +356,7 @@ if (typeof window !== "undefined" && !window.__speech_coach_v2_initialized) {
         const cuePrefix = "(?:(?:next|new)\\s+(?:practice\\s+)?(?:sentence|phrase)|try\\s+saying|now\\s+(?:try|say|repeat|pronounce)|repeat\\s+after\\s+me|your\\s+(?:next|new)\\s+(?:practice\\s+)?(?:sentence|phrase)\\s+is|practice\\s+(?:this|sentence|phrase)|say\\s+this|अगला\\s+वाक्य|नया\\s+वाक्य|siguiente\\s+frase|nueva\\s+(?:frase|oración)|phrase\\s+suivante|nouvelle\\s+phrase|nächster\\s+satz|neuer\\s+satz|prossima\\s+frase|nuova\\s+frase|próxima\\s+frase|nova\\s+frase|следующее\\s+предложение|новая\\s+фраза|下一句|الجملة\\s+التالية|次の文|다음\\s+문장)";
 
         // 1. Explicit labeled cue with quotes
-        const cueQuotedRe = new RegExp(`${cuePrefix}\\s*[:\\-—]?\\s*["“«「『]([^"”»」』\\n]{3,240})["”»」』]`, "gi");
+        const cueQuotedRe = new RegExp(`${cuePrefix}\\s*[:：\\-—]?\\s*["“«「『]([^"”»」』\\n]{3,240})["”»」』]`, "gi");
         let match;
         let lastCueQuoted = null;
         while ((match = cueQuotedRe.exec(raw)) !== null) {
@@ -364,7 +366,7 @@ if (typeof window !== "undefined" && !window.__speech_coach_v2_initialized) {
         if (lastCueQuoted) return lastCueQuoted;
 
         // 2. Explicit labeled cue (on its own line or inline after punctuation/whitespace, with or without quotes)
-        const cueLineRe = new RegExp(`(?:^|[\\n\\s.!?])(?:\\*\\*|__)?${cuePrefix}(?:\\*\\*|__)?\\s*[:\\-—]\\s*([^\\n]{4,240})`, "gi");
+        const cueLineRe = new RegExp(`(?:^|[\\n\\s.!?。？！।॥])(?:\\*\\*|__)?${cuePrefix}(?:\\*\\*|__)?\\s*[:：\\-—]\\s*([^\\n]{4,240})`, "gi");
         let lastCueLine = null;
         while ((match = cueLineRe.exec(raw)) !== null) {
             const ok = isPlausible(match[1]);
@@ -402,7 +404,7 @@ if (typeof window !== "undefined" && !window.__speech_coach_v2_initialized) {
         const nextSent = window.__owuiExtractNextPracticeSentence(raw, prevTarget, spokenText, targetLang);
         if (!nextSent || _scNorm(nextSent) === _scNorm(prevTarget)) return false;
         if (lastAcc !== null && lastAcc < 0.80) {
-            const explicitNextCue = /(?:^|\n|\s)(?:next|new)\s+(?:practice\s+)?(?:sentence|phrase)\s*[:\-—]/i.test(raw);
+            const explicitNextCue = /(?:^|\n|\s|[.!?。？！।॥])(?:(?:next|new)\s+(?:practice\s+)?(?:sentence|phrase)|अगला\s+वाक्य|नया\s+वाक्य|siguiente\s+frase|phrase\s+suivante|nächster\s+satz|prossima\s+frase|próxima\s+frase|следующее\s+предложение|下一句|الجملة\s+التالية|次の文|다음\s+문장)\s*[:：\-—]/i.test(raw);
             if (!explicitNextCue || _scHasRetryCue(raw)) return false;
         }
         localStorage.setItem("speech_coach_practice_target", nextSent);

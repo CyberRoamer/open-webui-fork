@@ -43,7 +43,7 @@ TARGETS: tuple[PatchTarget, ...] = (
         filename="B1EqPYAs.js",
         orig_filename="B1EqPYAs.js.orig",
         expected_orig_sha256="29d6b2a2e76eff38c3bd7602c006459ed8d19c405eeaa06b28da52b81347e31c",
-        expected_patched_sha256="58565200ca395b48424d4b87433fdaffe8bfaa3b522cacb7e6e89934c3699a9c",
+        expected_patched_sha256="1599b915fc4707f72647fc333f8c238c0138ab2e5b4bd3e31678fa95bd290ef6",
     ),
     PatchTarget(
         name="CaoI0pp2.js",
